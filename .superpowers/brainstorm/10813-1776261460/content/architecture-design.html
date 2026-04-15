@@ -1,0 +1,336 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap');
+  :root {
+    --gold: #c9a84c;
+    --gold-dim: rgba(201,168,76,0.15);
+    --gold-border: rgba(201,168,76,0.3);
+    --void: #06060d;
+    --surface: #0c0c1e;
+    --text: #ede8e0;
+    --text-dim: rgba(237,232,224,0.45);
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Cormorant Garamond', serif;
+  }
+  body { background: var(--void); color: var(--text); font-family: var(--mono); }
+
+  .section { margin-bottom: 36px; }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  /* File tree */
+  .tree {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 6px;
+    padding: 20px 24px;
+    font-size: 11px;
+    line-height: 2;
+  }
+  .tree .dir { color: var(--gold); }
+  .tree .file { color: var(--text-dim); }
+  .tree .file.new { color: var(--text); }
+  .tree .file.new::after {
+    content: ' ← new';
+    color: var(--gold);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+  .tree .file.modified::after {
+    content: ' ← modified';
+    color: rgba(201,168,76,0.6);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+  .indent1 { padding-left: 20px; }
+  .indent2 { padding-left: 40px; }
+
+  /* State machine */
+  .state-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .state-node {
+    background: var(--surface);
+    border: 1px solid var(--gold-border);
+    border-radius: 6px;
+    padding: 12px 18px;
+    font-size: 10px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .state-node .label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .state-node .desc {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .state-node.error { border-color: rgba(200,80,80,0.4); }
+  .state-node.error .label { color: #c85050; }
+  .state-node.success { border-color: rgba(80,160,100,0.4); }
+  .state-node.success .label { color: #50a064; }
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 10px;
+    gap: 2px;
+  }
+  .arrow .trigger {
+    font-size: 8px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .arrow .line {
+    font-size: 14px;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  /* Data flow */
+  .flow-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    padding: 8px 14px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .flow-box.highlight { border-color: var(--gold-border); }
+  .flow-box .name { color: var(--gold); }
+  .flow-box .sub { color: var(--text-dim); font-size: 9px; margin-top: 2px; }
+  .flow-connector {
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Hook shape */
+  .hook-shape {
+    background: var(--surface);
+    border: 1px solid var(--gold-border);
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .hook-name {
+    font-size: 11px;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+  .hook-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .hook-section-title {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .hook-item {
+    font-size: 10px;
+    color: var(--text);
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(201,168,76,0.06);
+  }
+  .hook-item .type { color: var(--text-dim); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .data-shape {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-size: 10px;
+  }
+  .data-shape .shape-name { color: var(--gold); margin-bottom: 8px; font-size: 11px; }
+  .data-shape .field { color: var(--text-dim); padding: 2px 0; }
+  .data-shape .field .key { color: var(--text); }
+  .data-shape .field .val { color: rgba(201,168,76,0.7); }
+</style>
+
+<h2 style="font-family:'Cormorant Garamond',serif;font-weight:300;font-size:26px;margin-bottom:6px">Architecture Design</h2>
+<p class="subtitle" style="margin-bottom:28px">Playlist Universe · Spotify feature</p>
+
+<!-- File Structure -->
+<div class="section">
+  <div class="section-title">01 — File Structure</div>
+  <div class="tree">
+    <div class="dir">src/</div>
+    <div class="indent1 file modified">App.tsx</div>
+    <div class="indent1 dir">components/</div>
+    <div class="indent2 file new">PlaylistInput.tsx</div>
+    <div class="indent2 file new">GalleryScene.tsx</div>
+    <div class="indent1 dir">hooks/</div>
+    <div class="indent2 file new">usePlaylistLoader.ts</div>
+    <div class="indent1 dir">utils/</div>
+    <div class="indent2 file new">parseSpotifyUrl.ts</div>
+    <div class="indent2 file new">spotifyApi.ts</div>
+    <div class="indent1 dir">types/</div>
+    <div class="indent2 file new">spotify.ts</div>
+    <div class="indent1 file">index.css</div>
+    <div class="indent1 file">main.tsx</div>
+  </div>
+</div>
+
+<!-- State Machine -->
+<div class="section">
+  <div class="section-title">02 — State Machine (usePlaylistLoader)</div>
+  <div class="state-flow">
+    <div class="state-node">
+      <div class="label">idle</div>
+      <div class="desc">empty input</div>
+    </div>
+    <div class="arrow">
+      <div class="trigger">submit URL</div>
+      <div class="line">→</div>
+    </div>
+    <div class="state-node">
+      <div class="label">loading</div>
+      <div class="desc">fetching token + tracks</div>
+    </div>
+    <div class="arrow">
+      <div class="trigger">API error</div>
+      <div class="line">→</div>
+    </div>
+    <div class="state-node error">
+      <div class="label">error</div>
+      <div class="desc">invalid / private / failed</div>
+    </div>
+    <div style="width:100%;height:0;margin:4px 0"></div>
+    <div style="display:flex;align-items:flex-start;gap:0;margin-top:8px">
+      <div style="width:90px;flex-shrink:0"></div>
+      <div class="arrow" style="margin-top:0">
+        <div class="trigger">success</div>
+        <div class="line">↓</div>
+      </div>
+      <div class="state-node success" style="margin-top:0">
+        <div class="label">ready</div>
+        <div class="desc">tracks[] loaded</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:10px;font-size:9px;color:var(--text-dim)">
+    error → idle on "try again" · token cached in memory (1hr TTL)
+  </div>
+</div>
+
+<!-- Data Flow -->
+<div class="section">
+  <div class="section-title">03 — Data Flow</div>
+  <div class="flow-diagram">
+    <div class="flow-row">
+      <div class="flow-box highlight"><div class="name">PlaylistInput</div><div class="sub">raw URL string</div></div>
+      <div class="flow-connector">→ parseSpotifyUrl() →</div>
+      <div class="flow-box"><div class="name">playlistId</div><div class="sub">5HaX196nnGC3...</div></div>
+      <div class="flow-connector">→ usePlaylistLoader()</div>
+    </div>
+    <div class="flow-row" style="padding-left:20px">
+      <div class="flow-connector">↓</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box"><div class="name">spotifyApi.ts</div><div class="sub">getToken() → getTracks()</div></div>
+      <div class="flow-connector">→ raw Spotify response →</div>
+      <div class="flow-box"><div class="name">mapToTrack()</div><div class="sub">normalize shape</div></div>
+      <div class="flow-connector">→</div>
+      <div class="flow-box highlight"><div class="name">Track[]</div><div class="sub">id · title · artist · album · image</div></div>
+    </div>
+    <div class="flow-row" style="padding-left:20px">
+      <div class="flow-connector">↓</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box highlight"><div class="name">GalleryScene</div><div class="sub">UniverseCanvas with album covers</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Hook + Types side by side -->
+<div class="two-col">
+  <div class="section">
+    <div class="section-title">04 — Hook Contract</div>
+    <div class="hook-shape">
+      <div class="hook-name">usePlaylistLoader()</div>
+      <div class="hook-grid">
+        <div>
+          <div class="hook-section-title">Returns</div>
+          <div class="hook-item">phase <span class="type">: Phase</span></div>
+          <div class="hook-item">tracks <span class="type">: Track[]</span></div>
+          <div class="hook-item">error <span class="type">: string | null</span></div>
+          <div class="hook-item">load(url) <span class="type">: void</span></div>
+          <div class="hook-item">reset() <span class="type">: void</span></div>
+        </div>
+        <div>
+          <div class="hook-section-title">Phase values</div>
+          <div class="hook-item">'idle'</div>
+          <div class="hook-item">'loading'</div>
+          <div class="hook-item">'ready'</div>
+          <div class="hook-item">'error'</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">05 — Track Type</div>
+    <div class="data-shape">
+      <div class="shape-name">Track</div>
+      <div class="field"><span class="key">id</span>: <span class="val">string</span></div>
+      <div class="field"><span class="key">title</span>: <span class="val">string</span></div>
+      <div class="field"><span class="key">artist</span>: <span class="val">string</span></div>
+      <div class="field"><span class="key">album</span>: <span class="val">string</span></div>
+      <div class="field"><span class="key">image</span>: <span class="val">string</span> <span style="color:var(--text-dim);font-size:9px">// album cover URL</span></div>
+    </div>
+    <div class="data-shape" style="margin-top:12px">
+      <div class="shape-name">Token Cache</div>
+      <div class="field"><span class="key">accessToken</span>: <span class="val">string</span></div>
+      <div class="field"><span class="key">expiresAt</span>: <span class="val">number</span> <span style="color:var(--text-dim);font-size:9px">// Date.now() + 3600s</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Error cases -->
+<div class="section">
+  <div class="section-title">06 — Error Handling</div>
+  <div class="three-col">
+    <div class="data-shape">
+      <div class="shape-name" style="color:#c87070">Invalid URL</div>
+      <div class="field" style="color:var(--text-dim)">Caught in parseSpotifyUrl() before any API call. Immediate error state, no network request.</div>
+    </div>
+    <div class="data-shape">
+      <div class="shape-name" style="color:#c87070">Playlist not found / private</div>
+      <div class="field" style="color:var(--text-dim)">Spotify returns 404 or 403. Mapped to user-friendly message. "This playlist doesn't exist or is private."</div>
+    </div>
+    <div class="data-shape">
+      <div class="shape-name" style="color:#c87070">API failure</div>
+      <div class="field" style="color:var(--text-dim)">Network error or 5xx. Generic fallback message with retry option.</div>
+    </div>
+  </div>
+</div>
