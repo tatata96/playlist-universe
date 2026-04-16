@@ -1,6 +1,7 @@
 const AUTH_SCOPE = [
   'user-library-read',
   'playlist-read-private',
+  'playlist-modify-private',
 ].join(' ')
 
 export function getSpotifyClientId() {

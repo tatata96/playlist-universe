@@ -1,22 +1,15 @@
 .spotify-player {
   position: fixed;
   bottom: 0;
-  left: 0;
   right: 0;
   z-index: 20;
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #ffffff;
-  border-top: 1px solid #e8e8e8;
+  background: transparent;
   height: 100px;
+  width: 50vw;
   padding: 0 20px;
-}
-
-.spotify-player__meta {
-  flex: 1;
-  min-width: 0;
-  font-family: 'JetBrains Mono', monospace;
 }
 
 .spotify-player__title {
@@ -49,4 +42,15 @@
   width: 300px;
   height: 80px;
   flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .spotify-player {
+    left: 0;
+    width: 100vw;
+  }
+
+  .spotify-player__embed {
+    width: 220px;
+  }
 }

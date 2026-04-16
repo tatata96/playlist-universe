@@ -100,22 +100,9 @@ export function SpotifyPlayer({ track, onNext }: Props) {
     controller.play()
   }, [track.id])
 
-  const year = track.releaseDate.slice(0, 4)
 
   return (
     <div className="spotify-player">
-      {/* Track metadata */}
-      <div className="spotify-player__meta">
-        <div className="spotify-player__title">
-          {track.title}
-        </div>
-        <div className="spotify-player__album">
-          {track.artist} · {track.album}
-        </div>
-        <div className="spotify-player__year">
-          {year}
-        </div>
-      </div>
 
       {/* Spotify embed target */}
       <div ref={containerRef} className="spotify-player__embed" />

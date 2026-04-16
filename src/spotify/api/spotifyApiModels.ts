@@ -15,6 +15,11 @@ export interface SpotifyTrack {
   album: SpotifyAlbum
 }
 
+export interface SpotifyPlaylist {
+  id: string
+  name: string
+}
+
 export interface SpotifyTrackItem {
   added_at: string
   track: SpotifyTrack | null

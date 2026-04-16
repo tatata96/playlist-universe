@@ -5,7 +5,7 @@ vi.mock('../../../spotify/auth/spotifyAuth', () => ({
 }))
 
 import { getValidSpotifyAccessToken } from '../../../spotify/auth/spotifyAuth'
-import { fetchLikedSongs } from '../../../spotify/api/spotifyApi'
+import { addTrackToPlaylist, createPlaylist, fetchLikedSongs } from '../../../spotify/api/spotifyApi'
 import type { SpotifyTrackItem } from '../../../spotify/api/spotifyApiModels'
 import { mapToTrack } from '../../../spotify/utils/spotifyApiUtils'
 
@@ -153,5 +153,53 @@ describe('fetchLikedSongs', () => {
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as unknown as Response)
 
     await expect(fetchLikedSongs()).rejects.toThrow('Something went wrong')
+  })
+})
+
+describe('playlist writes', () => {
+  beforeEach(() => {
+    mockGetToken.mockResolvedValue('mock-token')
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('creates a private playlist', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'playlist-1', name: 'My Playlist' }),
+    } as unknown as Response)
+
+    const playlist = await createPlaylist('My Playlist', 'A test playlist')
+
+    expect(playlist).toEqual({ id: 'playlist-1', name: 'My Playlist' })
+    expect(fetch).toHaveBeenCalledWith('https://api.spotify.com/v1/me/playlists', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer mock-token',
+      },
+      body: JSON.stringify({ name: 'My Playlist', description: 'A test playlist', public: false }),
+    })
+  })
+
+  it('adds a track URI to a playlist', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: async () => ({}),
+    } as unknown as Response)
+
+    await addTrackToPlaylist('playlist-1', 'spotify:track:track-1')
+
+    expect(fetch).toHaveBeenCalledWith('https://api.spotify.com/v1/playlists/playlist-1/items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer mock-token',
+      },
+      body: JSON.stringify({ uris: ['spotify:track:track-1'] }),
+    })
   })
 })

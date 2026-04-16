@@ -1,18 +1,24 @@
 import type { Track } from '../../types/spotify'
 import { getValidSpotifyAccessToken } from '../auth/spotifyAuth'
-import type { SpotifyPage, SpotifyTrack, SpotifyTrackItem } from './spotifyApiModels'
+import type { SpotifyPage, SpotifyPlaylist, SpotifyTrack, SpotifyTrackItem } from './spotifyApiModels'
 import { mapToTrack } from '../utils/spotifyApiUtils'
 
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1'
 
-async function spotifyGet<T>(path: string): Promise<T> {
+async function spotifyFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = await getValidSpotifyAccessToken()
   if (!token) {
     throw new Error('Not signed in. Please connect your Spotify account.')
   }
 
   const url = path.startsWith('http') ? path : `${SPOTIFY_API_BASE_URL}${path}`
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      ...init?.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  })
 
   if (response.status === 401) {
     throw new Error('Session expired. Please sign in again.')
@@ -37,6 +43,11 @@ async function spotifyGet<T>(path: string): Promise<T> {
     throw new Error(`Something went wrong (HTTP ${response.status}). Check your connection and try again.`)
   }
 
+  return response
+}
+
+async function spotifyGet<T>(path: string): Promise<T> {
+  const response = await spotifyFetch(path)
   return response.json() as Promise<T>
 }
 
@@ -54,4 +65,22 @@ export async function fetchLikedSongs(onProgress?: (count: number) => void): Pro
   return allItems
     .filter((item): item is SpotifyTrackItem & { track: SpotifyTrack } => item.track !== null)
     .map(mapToTrack)
+}
+
+export async function createPlaylist(name: string, description?: string): Promise<SpotifyPlaylist> {
+  const response = await spotifyFetch('/me/playlists', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description: description ?? '', public: false }),
+  })
+
+  return response.json() as Promise<SpotifyPlaylist>
+}
+
+export async function addTrackToPlaylist(playlistId: string, trackUri: string): Promise<void> {
+  await spotifyFetch(`/playlists/${playlistId}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uris: [trackUri] }),
+  })
 }
