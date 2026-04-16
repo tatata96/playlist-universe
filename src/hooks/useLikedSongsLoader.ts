@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Track } from '../types/spotify'
-import { fetchLikedSongs } from '../utils/spotifyApi'
+import { fetchLikedSongs } from '../api/spotifyApi'
 
 type Options = { enabled: boolean }
 
