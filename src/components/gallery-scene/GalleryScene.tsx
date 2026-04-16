@@ -12,7 +12,63 @@ interface Props {
   onBack: () => void
 }
 
-type GroupByMode = 'scatter' | 'year' | 'added'
+type GroupByMode =
+  | 'scatter'
+  | 'year'
+  | 'added'
+  | 'country'
+  | 'speed'
+  | 'genre'
+  | 'energy'
+  | 'scene'
+  | 'instrumentation'
+  | 'popularityTier'
+
+const GROUP_BY_MODES: GroupByMode[] = [
+  'scatter',
+  'year',
+  'added',
+  'country',
+  'speed',
+  'genre',
+  'energy',
+  'scene',
+  'instrumentation',
+  'popularityTier',
+]
+
+const GROUP_BY_LABELS: Record<GroupByMode, string> = {
+  scatter: 'Scatter',
+  year: 'By Year',
+  added: 'By Added',
+  country: 'By Country',
+  speed: 'By Speed',
+  genre: 'By Genre',
+  energy: 'By Energy',
+  scene: 'By Scene',
+  instrumentation: 'By Sound',
+  popularityTier: 'By Popularity',
+}
+
+function getEnergyBucket(energy?: number) {
+  if (energy == null) return 'unknown'
+  if (energy < 35) return 'low'
+  if (energy < 70) return 'medium'
+  return 'high'
+}
+
+function getTrackGroup(track: Track, mode: GroupByMode) {
+  if (mode === 'year') return track.releaseDate.slice(0, 4)
+  if (mode === 'added') return track.addedAt.slice(0, 7)
+  if (mode === 'country') return track.country ?? 'unknown'
+  if (mode === 'speed') return track.speed ?? 'unknown'
+  if (mode === 'genre') return track.genre?.[0] ?? 'unknown'
+  if (mode === 'energy') return getEnergyBucket(track.energy)
+  if (mode === 'scene') return track.scene?.[0] ?? 'unknown'
+  if (mode === 'instrumentation') return track.instrumentation?.[0] ?? 'unknown'
+  if (mode === 'popularityTier') return track.popularityTier ?? 'unknown'
+  return 'scatter'
+}
 
 // Module-level — does not depend on data
 const renderItem = createImageRenderer<Track>('image')
@@ -116,16 +172,13 @@ export function GalleryScene({ tracks, onBack }: Props) {
     setGroupByMode(mode)
     if (mode === 'scatter') {
       core.setGroupBy(null)
-    } else if (mode === 'year') {
-      core.setGroupBy((item: UniverseItem<Track>) => item.data.releaseDate.slice(0, 4))
     } else {
-      core.setGroupBy((item: UniverseItem<Track>) => item.data.addedAt.slice(0, 7))
+      core.setGroupBy((item: UniverseItem<Track>) => getTrackGroup(item.data, mode))
     }
   }
 
   const groupByFn = useMemo((): ((item: RenderItem<Track>) => string) | null => {
-    if (groupByMode === 'year') return (item) => item.data.releaseDate.slice(0, 4)
-    if (groupByMode === 'added') return (item) => item.data.addedAt.slice(0, 7)
+    if (groupByMode !== 'scatter') return (item) => getTrackGroup(item.data, groupByMode)
     return null
   }, [groupByMode])
 
@@ -143,8 +196,7 @@ export function GalleryScene({ tracks, onBack }: Props) {
 
       {/* Group-by buttons — vertical column below back button */}
       <div className="gallery-scene__group-buttons">
-        {(['scatter', 'year', 'added'] as GroupByMode[]).map((mode) => {
-          const label = mode === 'scatter' ? 'Scatter' : mode === 'year' ? 'By Year' : 'By Added'
+        {GROUP_BY_MODES.map((mode) => {
           const isActive = groupByMode === mode
           return (
             <button
@@ -152,7 +204,7 @@ export function GalleryScene({ tracks, onBack }: Props) {
               onClick={() => handleSetGroupBy(mode)}
               className={`gallery-scene__button${isActive ? ' gallery-scene__button--active' : ''}`}
             >
-              {label}
+              {GROUP_BY_LABELS[mode]}
             </button>
           )
         })}

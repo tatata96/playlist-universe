@@ -66,7 +66,11 @@ export default function App() {
       <div className="app-status-screen">
         <div className="app-spinner" />
         <p className="app-status-text">
-          {liked.loadedCount > 0 ? `Loading ${liked.loadedCount} tracks…` : 'Loading liked songs…'}
+          {liked.stage === 'groq'
+            ? `Enriching ${liked.enrichedCount} / ${liked.totalCount} tracks...`
+            : liked.loadedCount > 0
+              ? `Loading ${liked.loadedCount} tracks...`
+              : 'Loading liked songs...'}
         </p>
       </div>
     )
