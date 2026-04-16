@@ -1,53 +1,41 @@
 import { useState, useEffect } from 'react'
 import { useSpotifyAuth } from './hooks/useSpotifyAuth'
-import { usePlaylistLoader } from './hooks/usePlaylistLoader'
 import { useLikedSongsLoader } from './hooks/useLikedSongsLoader'
 import { beginSpotifyLogin } from './lib/spotifyAuth'
 import { ModeSelect } from './components/mode-select/ModeSelect'
-import { PlaylistInput } from './components/playlist-input/PlaylistInput'
 import { GalleryScene } from './components/gallery-scene/GalleryScene'
-import type { Track, Mode } from './types/spotify'
+import type { Track } from './types/spotify'
 import './App.css'
 
 const MODE_KEY = 'playlist-universe:mode'
 
-type View = 'mode-select' | 'url-input' | 'liked-loading' | 'gallery' | 'error'
+type View = 'mode-select' | 'liked-loading' | 'gallery' | 'error'
 
 export default function App() {
   const { tokens, isLoading: authLoading, errorMessage: authError } = useSpotifyAuth()
   const [view, setView] = useState<View>('mode-select')
   const [galleryTracks, setGalleryTracks] = useState<Track[]>([])
-  const [likedError, setLikedError] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const playlist = usePlaylistLoader()
   const liked = useLikedSongsLoader({ enabled: view === 'liked-loading' })
 
-  // After OAuth callback: read stored mode and route to correct view
+  // After OAuth callback: start loading liked songs
   useEffect(() => {
     if (authLoading) return
     if (!tokens) return
-    const savedMode = sessionStorage.getItem(MODE_KEY) as Mode | null
+    const savedMode = sessionStorage.getItem(MODE_KEY)
     if (!savedMode) return
     sessionStorage.removeItem(MODE_KEY)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setView(savedMode === 'playlist-url' ? 'url-input' : 'liked-loading')
+    setView('liked-loading')
   }, [authLoading, tokens])
 
-  // Playlist URL mode: when load completes, go to gallery
-  useEffect(() => {
-    if (playlist.phase === 'ready') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setGalleryTracks(playlist.tracks)
-      setView('gallery')
-    }
-  }, [playlist.phase, playlist.tracks])
-
-  // Liked songs mode: when fetch completes, go to gallery or error
+  // When liked songs load completes, go to gallery or error
   useEffect(() => {
     if (!liked.isComplete) return
     if (liked.error) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLikedError(liked.error)
+      setErrorMessage(liked.error)
       setView('error')
     } else {
       setGalleryTracks(liked.tracks)
@@ -55,24 +43,23 @@ export default function App() {
     }
   }, [liked.isComplete, liked.error, liked.tracks])
 
-  const handleModeSelect = async (mode: Mode) => {
-    sessionStorage.setItem(MODE_KEY, mode)
+  const handleBegin = async () => {
+    if (tokens) {
+      setView('liked-loading')
+      return
+    }
+    sessionStorage.setItem(MODE_KEY, 'liked-songs')
     await beginSpotifyLogin()
   }
 
   const reset = () => {
     setView('mode-select')
     setGalleryTracks([])
-    setLikedError(null)
-    playlist.reset()
+    setErrorMessage(null)
   }
 
   if (view === 'gallery') {
     return <GalleryScene tracks={galleryTracks} onBack={reset} />
-  }
-
-  if (view === 'url-input') {
-    return <PlaylistInput phase={playlist.phase} error={playlist.error} onSubmit={playlist.load} />
   }
 
   if (view === 'liked-loading') {
@@ -89,27 +76,16 @@ export default function App() {
   if (view === 'error') {
     return (
       <div className="app-status-screen app-status-screen--padded">
-        <p className="app-error-text">
-          {likedError}
-        </p>
-        <button
-          onClick={reset}
-          className="app-back-button"
-        >
-          ← Back
-        </button>
+        <p className="app-error-text">{errorMessage}</p>
+        <button onClick={reset} className="app-back-button">← Back</button>
       </div>
     )
   }
 
   return (
     <>
-      <ModeSelect onModeSelect={handleModeSelect} />
-      {authError && (
-        <div className="app-auth-error">
-          {authError}
-        </div>
-      )}
+      <ModeSelect onBegin={handleBegin} />
+      {authError && <div className="app-auth-error">{authError}</div>}
     </>
   )
 }

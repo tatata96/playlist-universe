@@ -1,6 +1,6 @@
 export type Phase = 'idle' | 'loading' | 'ready' | 'error'
 
-export type Mode = 'playlist-url' | 'liked-songs'
+export type Mode = 'liked-songs'
 
 // Must be a `type` (not `interface`) so it satisfies
 // `Record<string, unknown>` required by gallery-universe generics.

@@ -1,11 +1,10 @@
-import type { Mode } from '../../types/spotify'
 import './mode-select.css'
 
 interface Props {
-  onModeSelect: (mode: Mode) => void
+  onBegin: () => void
 }
 
-export function ModeSelect({ onModeSelect }: Props) {
+export function ModeSelect({ onBegin }: Props) {
   return (
     <div className="mode-select">
 
@@ -15,36 +14,13 @@ export function ModeSelect({ onModeSelect }: Props) {
           Playlist <em>Universe</em>
         </h1>
         <p className="mode-select__subtitle">
-          choose a mode to begin
+          invite only
         </p>
       </div>
 
-      {/* Cards */}
+      {/* Card */}
       <div className="mode-select__cards">
-
-        {/* Playlist URL */}
-        <div className="mode-select__card">
-          <div className="mode-select__icon">🔗</div>
-          <div className="mode-select__card-title">
-            Playlist URL
-          </div>
-          <p className="mode-select__description">
-            Paste any Spotify playlist link and explore it as a 3D universe
-          </p>
-          <button
-            onClick={() => onModeSelect('playlist-url')}
-            className="mode-select__button mode-select__button--primary"
-          >
-            Enter →
-          </button>
-        </div>
-
-        {/* Liked Songs */}
         <div className="mode-select__card mode-select__card--invite">
-          {/* Badge */}
-          <div className="mode-select__badge">
-            invite only
-          </div>
 
           <div className="mode-select__icon">❤️</div>
           <div className="mode-select__card-title">
@@ -72,11 +48,8 @@ export function ModeSelect({ onModeSelect }: Props) {
             </p>
           </div>
 
-          <button
-            onClick={() => onModeSelect('liked-songs')}
-            className="mode-select__button"
-          >
-            I have an invite →
+          <button onClick={onBegin} className="mode-select__button mode-select__button--primary">
+            Enter →
           </button>
 
           {/* Disclaimer */}
@@ -84,8 +57,8 @@ export function ModeSelect({ onModeSelect }: Props) {
             <span>Note:</span> if your account hasn't been added,<br />
             Spotify will return an error after login.
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   )
