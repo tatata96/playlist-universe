@@ -13,7 +13,7 @@ const MODE_KEY = 'playlist-universe:mode'
 type View = 'mode-select' | 'url-input' | 'liked-loading' | 'gallery' | 'error'
 
 export default function App() {
-  const { tokens, isLoading: authLoading } = useSpotifyAuth()
+  const { tokens, isLoading: authLoading, errorMessage: authError } = useSpotifyAuth()
   const [view, setView] = useState<View>('mode-select')
   const [galleryTracks, setGalleryTracks] = useState<Track[]>([])
   const [likedError, setLikedError] = useState<string | null>(null)
@@ -125,5 +125,20 @@ export default function App() {
     )
   }
 
-  return <ModeSelect onModeSelect={handleModeSelect} />
+  return (
+    <>
+      <ModeSelect onModeSelect={handleModeSelect} />
+      {authError && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem',
+          color: '#a03030', letterSpacing: '0.04em', textAlign: 'center',
+          background: '#fff', border: '1px solid rgba(180,50,50,0.25)',
+          padding: '10px 20px', maxWidth: '420px',
+        }}>
+          {authError}
+        </div>
+      )}
+    </>
+  )
 }

@@ -7,8 +7,6 @@ const TOKEN_STORAGE_KEY = "spotify_auth_tokens";
 const AUTH_SCOPE = [
   "user-library-read",
   "playlist-read-private",
-  "playlist-modify-public",
-  "playlist-modify-private",
 ].join(" ");
 let loginCompletionPromise: Promise<StoredSpotifyTokens | null> | null = null;
 
@@ -217,7 +215,6 @@ export const beginSpotifyLogin = async () => {
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
     state,
-    show_dialog: "true",
   });
 
   window.location.assign(`${SPOTIFY_AUTHORIZE_URL}?${searchParams.toString()}`);
