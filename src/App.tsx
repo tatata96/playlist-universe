@@ -1,148 +1,129 @@
-import { useState } from 'react'
-import { useUniverseCore, UniverseCanvas, createItems, createImageRenderer } from 'gallery-universe'
+import { useState, useEffect } from 'react'
+import { useSpotifyAuth } from './hooks/useSpotifyAuth'
+import { usePlaylistLoader } from './hooks/usePlaylistLoader'
+import { useLikedSongsLoader } from './hooks/useLikedSongsLoader'
+import { beginSpotifyLogin } from './lib/spotifyAuth'
+import { ModeSelect } from './components/ModeSelect'
+import { PlaylistInput } from './components/PlaylistInput'
+import { GalleryScene } from './components/GalleryScene'
+import type { Track, Mode } from './types/spotify'
 
-type MovieData = {
-  title: string
-  genre: string
-  year: number
-  rating: number
-  director: string
-  imageUrl: string
-}
+const MODE_KEY = 'playlist-universe:mode'
 
-const GENRES_LIST = [
-  'Action', 'Drama', 'Comedy', 'Thriller', 'Horror',
-  'Sci-Fi', 'Romance', 'Animation', 'Documentary', 'Fantasy',
-]
-
-
-const ADJECTIVES = [
-  'Dark', 'Lost', 'Final', 'Last', 'Eternal', 'Silent', 'Broken',
-  'Hidden', 'Golden', 'Wild', 'Sacred', 'Forgotten', 'Rising',
-  'Fallen', 'Crimson', 'Iron', 'Hollow', 'Twisted', 'Ancient',
-  'Burning', 'Frozen', 'Shattered', 'Cursed', 'Neon', 'Midnight',
-  'Distant', 'Dead', 'Living', 'Missing', 'Painted', 'Perfect',
-  'Strange', 'Empty', 'Bright', 'Deep', 'Quiet', 'Violent',
-  'Beautiful', 'Savage', 'Noble', 'Reckless', 'Blind', 'Pale',
-  'Bitter', 'Gentle', 'Cruel', 'Tender', 'Fleeting', 'Infinite',
-]
-
-const NOUNS = [
-  'Garden', 'Storm', 'Mirror', 'Shadow', 'Kingdom', 'Dream',
-  'Fire', 'Night', 'Moon', 'Star', 'Heart', 'Mind', 'World',
-  'Path', 'Gate', 'City', 'River', 'Forest', 'Ocean', 'Mountain',
-  'Clock', 'Machine', 'Code', 'Horizon', 'Echo', 'Phantom',
-  'Throne', 'Crown', 'Mask', 'Blood', 'Bone', 'Soul', 'Ghost',
-  'Flame', 'Stone', 'Wind', 'Chain', 'Road', 'Bridge', 'Tower',
-  'Maze', 'Arrow', 'Key', 'Letter', 'Truth', 'War', 'Peace',
-  'Hope', 'Fear', 'Signal', 'Protocol', 'Portrait', 'Requiem',
-]
-
-const DIRECTORS = [
-  'Christopher Nolan', 'Denis Villeneuve', 'Wes Anderson',
-  'Greta Gerwig', 'Jordan Peele', 'Bong Joon-ho',
-  'Pedro Almodóvar', 'Wong Kar-wai', 'Park Chan-wook',
-  'Ari Aster', 'David Fincher', 'Alfonso Cuarón',
-  'Guillermo del Toro', 'Kathryn Bigelow', 'Sofia Coppola',
-]
-
-const PREFIXES = ['The ', 'A ', '', '', '', '']
-
-function sr(seed: number): number {
-  const x = Math.sin(seed + 1) * 10000
-  return x - Math.floor(x)
-}
-
-function pick<T>(arr: T[], seed: number): T {
-  return arr[Math.floor(seed * arr.length)]
-}
-
-const ALL_MOVIES = createItems<MovieData>(800, (i) => {
-  const g = (o: number) => sr(i * 31 + o)
-  return {
-    title: `${pick(PREFIXES, g(4))}${pick(ADJECTIVES, g(2))} ${pick(NOUNS, g(3))}`,
-    genre: pick(GENRES_LIST, g(1)),
-    year: 1968 + Math.floor(g(5) * 57),
-    rating: Math.round((g(6) * 3.5 + 6.5) * 10) / 10,
-    director: pick(DIRECTORS, g(7)),
-    imageUrl: `https://picsum.photos/seed/cine${i}/300/450`,
-  }
-})
-
-const ALL_GENRES = [...new Set(ALL_MOVIES.map((item) => item.data.genre))].sort()
-
-const renderItem = createImageRenderer<MovieData>('imageUrl')
+type View = 'mode-select' | 'url-input' | 'liked-loading' | 'gallery' | 'error'
 
 export default function App() {
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null)
+  const { tokens, isLoading: authLoading } = useSpotifyAuth()
+  const [view, setView] = useState<View>('mode-select')
+  const [galleryTracks, setGalleryTracks] = useState<Track[]>([])
+  const [likedError, setLikedError] = useState<string | null>(null)
 
-  const core = useUniverseCore<MovieData>({
-    items: ALL_MOVIES,
-    onItemClick: (item) => {
-      console.log('clicked:', item.data.title)
-    },
-    onItemDoubleClick: (item) => {
-      console.log('double-clicked:', item.data.title)
-    },
-  })
+  const playlist = usePlaylistLoader()
+  const liked = useLikedSongsLoader({ enabled: view === 'liked-loading' })
 
-  const handleFilter = (genre: string | null) => {
-    setSelectedGenre(genre)
-    core.setGroupBy(genre ? (item) => item.data.genre : null)
+  // After OAuth callback: read stored mode and route to correct view
+  useEffect(() => {
+    if (authLoading) return
+    if (!tokens) return
+    const savedMode = sessionStorage.getItem(MODE_KEY) as Mode | null
+    if (!savedMode) return
+    sessionStorage.removeItem(MODE_KEY)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setView(savedMode === 'playlist-url' ? 'url-input' : 'liked-loading')
+  }, [authLoading, tokens])
+
+  // Playlist URL mode: when load completes, go to gallery
+  useEffect(() => {
+    if (playlist.phase === 'ready') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGalleryTracks(playlist.tracks)
+      setView('gallery')
+    }
+  }, [playlist.phase, playlist.tracks])
+
+  // Liked songs mode: when fetch completes, go to gallery or error
+  useEffect(() => {
+    if (!liked.isComplete) return
+    if (liked.error) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLikedError(liked.error)
+      setView('error')
+    } else {
+      setGalleryTracks(liked.tracks)
+      setView('gallery')
+    }
+  }, [liked.isComplete, liked.error, liked.tracks])
+
+  const handleModeSelect = async (mode: Mode) => {
+    sessionStorage.setItem(MODE_KEY, mode)
+    await beginSpotifyLogin()
   }
 
-  return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#f0f0f0' }}>
-      <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 10, display: 'flex', gap: 8 }}>
-        <button
-          onClick={() => handleFilter(null)}
-          style={{ fontWeight: selectedGenre === null ? 'bold' : 'normal' }}
-        >
-          Scatter
-        </button>
+  const reset = () => {
+    setView('mode-select')
+    setGalleryTracks([])
+    setLikedError(null)
+    playlist.reset()
+  }
 
-        <button
-          onClick={() => handleFilter('genre')}
-          style={{ fontWeight: selectedGenre === 'genre' ? 'bold' : 'normal' }}
-        >
-          By Genre
-        </button>
+  if (view === 'gallery') {
+    return <GalleryScene tracks={galleryTracks} onBack={reset} />
+  }
+
+  if (view === 'url-input') {
+    return <PlaylistInput phase={playlist.phase} error={playlist.error} onSubmit={playlist.load} />
+  }
+
+  if (view === 'liked-loading') {
+    return (
+      <div style={{
+        width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '16px',
+        background: '#ffffff', fontFamily: "'JetBrains Mono', monospace",
+      }}>
+        <div style={{
+          width: 32, height: 32, border: '2px solid #e0ddd8',
+          borderTopColor: '#4a7c59', borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <p style={{
+          fontSize: '0.6rem', letterSpacing: '0.18em',
+          textTransform: 'uppercase', color: '#6b6860',
+        }}>
+          {liked.loadedCount > 0 ? `Loading ${liked.loadedCount} tracks…` : 'Loading liked songs…'}
+        </p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
+    )
+  }
 
-      <UniverseCanvas
-        core={{ ...core, animationState: core.animRef }}
-        width={window.innerWidth}
-        height={window.innerHeight}
-        renderItem={renderItem}
-        groupBy={selectedGenre ? (item) => item.data.genre : null}
-      />
-
-      {selectedGenre && (
-        <div
+  if (view === 'error') {
+    return (
+      <div style={{
+        width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '20px',
+        background: '#ffffff', fontFamily: "'JetBrains Mono', monospace", padding: '24px',
+      }}>
+        <p style={{
+          fontSize: '0.65rem', color: '#a03030', letterSpacing: '0.04em',
+          textAlign: 'center', maxWidth: '400px', lineHeight: 1.7,
+        }}>
+          {likedError}
+        </p>
+        <button
+          onClick={reset}
           style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            display: 'flex',
-            gap: 8,
-            overflowX: 'auto',
-            padding: '8px 16px',
-            background: 'rgba(240,240,240,0.92)',
-            zIndex: 10,
+            background: 'transparent', border: '1px solid #e0ddd8',
+            color: '#6b6860', fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '0.6rem', letterSpacing: '0.15em',
+            padding: '8px 20px', textTransform: 'uppercase', cursor: 'pointer',
           }}
         >
-          {ALL_GENRES.map((genre) => (
-            <button
-              key={genre}
-              onClick={() => core.navigateToGroup(genre)}
-              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
-            >
-              {genre}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+          ← Back
+        </button>
+      </div>
+    )
+  }
+
+  return <ModeSelect onModeSelect={handleModeSelect} />
 }
