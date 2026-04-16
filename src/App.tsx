@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSpotifyAuth } from './hooks/useSpotifyAuth'
 import { useLikedSongsLoader } from './hooks/useLikedSongsLoader'
-import { beginSpotifyLogin } from './lib/spotifyAuth'
 import { ModeSelect } from './components/mode-select/ModeSelect'
 import { GalleryScene } from './components/gallery-scene/GalleryScene'
 import type { Track } from './types/spotify'
@@ -12,7 +11,7 @@ const MODE_KEY = 'playlist-universe:mode'
 type View = 'mode-select' | 'liked-loading' | 'gallery' | 'error'
 
 export default function App() {
-  const { tokens, isLoading: authLoading, errorMessage: authError } = useSpotifyAuth()
+  const { tokens, isLoading: authLoading, errorMessage: authError, login } = useSpotifyAuth()
   const [view, setView] = useState<View>('mode-select')
   const [galleryTracks, setGalleryTracks] = useState<Track[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -49,7 +48,7 @@ export default function App() {
       return
     }
     sessionStorage.setItem(MODE_KEY, 'liked-songs')
-    await beginSpotifyLogin()
+    await login()
   }
 
   const reset = () => {

@@ -22,6 +22,11 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
 
     let cancelled = false
 
+    setTracks([])
+    setLoadedCount(0)
+    setError(null)
+    setIsComplete(false)
+
     fetchLikedSongs((count) => {
       if (!cancelled) setLoadedCount(count)
     })
