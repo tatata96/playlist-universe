@@ -11,12 +11,14 @@ import type { SpotifyTrackItem } from './spotifyApi'
 const mockGetToken = vi.mocked(getValidSpotifyAccessToken)
 
 const makeTrackItem = (id: string): SpotifyTrackItem => ({
+  added_at: '2023-01-01T00:00:00Z',
   track: {
     id,
     name: 'Song',
     artists: [{ name: 'Artist' }],
     album: {
       name: 'Album',
+      release_date: '2020-01-01',
       images: [{ url: `https://img/${id}.jpg`, width: 640, height: 640 }],
     },
   },
@@ -30,12 +32,14 @@ const makePage = (items: SpotifyTrackItem[], next: string | null = null) => ({
 
 describe('mapToTrack', () => {
   const mockItem: SpotifyTrackItem = {
+    added_at: '2021-05-01T00:00:00Z',
     track: {
       id: 'track123',
       name: 'Bohemian Rhapsody',
       artists: [{ name: 'Queen' }, { name: 'Other Artist' }],
       album: {
         name: 'A Night at the Opera',
+        release_date: '2023-07-14',
         images: [
           { url: 'https://i.scdn.co/image/large.jpg', width: 640, height: 640 },
           { url: 'https://i.scdn.co/image/small.jpg', width: 300, height: 300 },
@@ -45,28 +49,31 @@ describe('mapToTrack', () => {
   }
 
   it('maps a spotify item to the Track shape', () => {
-    expect(mapToTrack({ track: mockItem.track! })).toEqual({
+    expect(mapToTrack(mockItem as SpotifyTrackItem & { track: NonNullable<SpotifyTrackItem['track']> })).toEqual({
       id: 'track123',
       title: 'Bohemian Rhapsody',
       artist: 'Queen',
       album: 'A Night at the Opera',
       image: 'https://i.scdn.co/image/large.jpg',
+      releaseDate: '2023-07-14',
+      addedAt: '2021-05-01T00:00:00Z',
     })
   })
 
   it('uses only the primary (first) artist', () => {
-    expect(mapToTrack({ track: mockItem.track! }).artist).toBe('Queen')
+    expect(mapToTrack(mockItem as SpotifyTrackItem & { track: NonNullable<SpotifyTrackItem['track']> }).artist).toBe('Queen')
   })
 
   it('uses the largest image (first in the array)', () => {
-    expect(mapToTrack({ track: mockItem.track! }).image).toBe('https://i.scdn.co/image/large.jpg')
+    expect(mapToTrack(mockItem as SpotifyTrackItem & { track: NonNullable<SpotifyTrackItem['track']> }).image).toBe('https://i.scdn.co/image/large.jpg')
   })
 
   it('falls back to empty string when there are no images', () => {
-    const noImages = {
-      track: { ...mockItem.track!, album: { name: 'A Night at the Opera', images: [] } },
+    const noImages: SpotifyTrackItem = {
+      added_at: '2021-05-01T00:00:00Z',
+      track: { ...mockItem.track!, album: { name: 'A Night at the Opera', release_date: '2023-07-14', images: [] } },
     }
-    expect(mapToTrack(noImages).image).toBe('')
+    expect(mapToTrack(noImages as SpotifyTrackItem & { track: NonNullable<SpotifyTrackItem['track']> }).image).toBe('')
   })
 })
 
@@ -80,7 +87,12 @@ describe('fetchPlaylistTracks', () => {
   it('returns mapped tracks for a single-page playlist', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(makePage([makeTrackItem('abc')]) as unknown as Response)
     const tracks = await fetchPlaylistTracks('playlist123')
-    expect(tracks).toEqual([{ id: 'abc', title: 'Song', artist: 'Artist', album: 'Album', image: 'https://img/abc.jpg' }])
+    expect(tracks).toEqual([{
+      id: 'abc', title: 'Song', artist: 'Artist', album: 'Album',
+      image: 'https://img/abc.jpg',
+      releaseDate: '2020-01-01',
+      addedAt: '2023-01-01T00:00:00Z',
+    }])
   })
 
   it('paginates until next is null', async () => {
@@ -111,7 +123,7 @@ describe('fetchPlaylistTracks', () => {
 
   it('filters out null tracks', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      makePage([{ track: null }, makeTrackItem('real')]) as unknown as Response
+      makePage([{ track: null, added_at: '2023-01-01T00:00:00Z' }, makeTrackItem('real')]) as unknown as Response
     )
     const tracks = await fetchPlaylistTracks('p')
     expect(tracks).toHaveLength(1)

@@ -4,10 +4,15 @@ import { getValidSpotifyAccessToken } from '../lib/spotifyAuth'
 // ---- Internal types ----
 
 interface SpotifyArtist { name: string }
-interface SpotifyAlbum { name: string; images: Array<{ url: string; width: number; height: number }> }
+interface SpotifyAlbum {
+  name: string
+  release_date: string
+  images: Array<{ url: string; width: number; height: number }>
+}
 interface SpotifyTrack { id: string; name: string; artists: SpotifyArtist[]; album: SpotifyAlbum }
 
 export interface SpotifyTrackItem {
+  added_at: string
   track: SpotifyTrack | null
 }
 
@@ -35,7 +40,7 @@ async function spotifyGet<T>(path: string): Promise<T> {
 
 // ---- Public API ----
 
-export function mapToTrack(item: { track: SpotifyTrack }): Track {
+export function mapToTrack(item: SpotifyTrackItem & { track: SpotifyTrack }): Track {
   const t = item.track
   return {
     id: t.id,
@@ -43,6 +48,8 @@ export function mapToTrack(item: { track: SpotifyTrack }): Track {
     artist: t.artists[0].name,
     album: t.album.name,
     image: t.album.images[0]?.url ?? '',
+    releaseDate: t.album.release_date,
+    addedAt: item.added_at,
   }
 }
 
@@ -51,7 +58,7 @@ export async function fetchPlaylistTracks(playlistId: string): Promise<Track[]> 
   let url: string | null = `/playlists/${playlistId}/tracks?limit=50`
 
   while (url) {
-    const page = await spotifyGet<SpotifyPage>(url)
+    const page: SpotifyPage = await spotifyGet<SpotifyPage>(url)
     allItems.push(...page.items)
     url = page.next
   }
@@ -70,7 +77,7 @@ export async function fetchLikedSongs(onProgress?: (count: number) => void): Pro
 
   try {
     while (url) {
-      const page = await spotifyGet<SpotifyPage>(url)
+      const page: SpotifyPage = await spotifyGet<SpotifyPage>(url)
       allItems.push(...page.items)
       onProgress?.(allItems.length)
       url = page.next

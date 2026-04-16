@@ -10,4 +10,6 @@ export type Track = {
   artist: string
   album: string
   image: string // album cover URL (640px)
+  releaseDate: string // e.g. "2021-03-05"
+  addedAt: string    // e.g. "2023-11-14T10:22:00Z"
 }
