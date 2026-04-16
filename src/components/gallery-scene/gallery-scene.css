@@ -1,0 +1,43 @@
+.gallery-scene {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.gallery-scene__button {
+  background: transparent;
+  border: 1px solid #cccccc;
+  color: #555555;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  padding: 6px 14px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  text-align: left;
+}
+
+.gallery-scene__button:hover,
+.gallery-scene__button--active {
+  border-color: #c9a84c;
+  color: #c9a84c;
+}
+
+.gallery-scene__back-button {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+}
+
+.gallery-scene__group-buttons {
+  position: fixed;
+  top: 60px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from 'react'
-import type { CSSProperties } from 'react'
 import { useUniverseCore, UniverseCanvas, createItems, createImageRenderer } from 'gallery-universe'
 import type { RenderItem, UniverseItem } from 'gallery-universe'
-import type { Track } from '../types/spotify'
-import { SpotifyPlayer } from './SpotifyPlayer'
+import type { Track } from '../../types/spotify'
+import { SpotifyPlayer } from '../spotify-player/SpotifyPlayer'
+import './gallery-scene.css'
 
 interface Props {
   tracks: Track[]
@@ -14,26 +14,6 @@ type GroupByMode = 'scatter' | 'year' | 'added'
 
 // Module-level — does not depend on data
 const renderItem = createImageRenderer<Track>('image')
-
-const BTN_BASE: CSSProperties = {
-  background: 'transparent',
-  border: '1px solid #ccc',
-  color: '#555',
-  fontFamily: "'JetBrains Mono', monospace",
-  fontSize: '0.65rem',
-  letterSpacing: '0.15em',
-  padding: '6px 14px',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-  transition: 'border-color 0.2s, color 0.2s',
-  textAlign: 'left',
-}
-
-const BTN_ACTIVE: CSSProperties = {
-  ...BTN_BASE,
-  borderColor: '#c9a84c',
-  color: '#c9a84c',
-}
 
 export function GalleryScene({ tracks, onBack }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -76,31 +56,17 @@ export function GalleryScene({ tracks, onBack }: Props) {
   const selectedTrack = selectedIndex !== null ? tracks[selectedIndex] : null
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: 'white' }}>
+    <div className="gallery-scene">
       {/* Back button */}
       <button
         onClick={onBack}
-        style={{
-          position: 'fixed', top: 16, left: 16, zIndex: 10,
-          ...BTN_BASE,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = '#c9a84c'
-          e.currentTarget.style.color = '#c9a84c'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#ccc'
-          e.currentTarget.style.color = '#555'
-        }}
+        className="gallery-scene__button gallery-scene__back-button"
       >
         ← Back
       </button>
 
       {/* Group-by buttons — vertical column below back button */}
-      <div style={{
-        position: 'fixed', top: 60, left: 16, zIndex: 10,
-        display: 'flex', flexDirection: 'column', gap: 6,
-      }}>
+      <div className="gallery-scene__group-buttons">
         {(['scatter', 'year', 'added'] as GroupByMode[]).map((mode) => {
           const label = mode === 'scatter' ? 'Scatter' : mode === 'year' ? 'By Year' : 'By Added'
           const isActive = groupByMode === mode
@@ -108,19 +74,7 @@ export function GalleryScene({ tracks, onBack }: Props) {
             <button
               key={mode}
               onClick={() => handleSetGroupBy(mode)}
-              style={isActive ? BTN_ACTIVE : BTN_BASE}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.borderColor = '#c9a84c'
-                  e.currentTarget.style.color = '#c9a84c'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.borderColor = '#ccc'
-                  e.currentTarget.style.color = '#555'
-                }
-              }}
+              className={`gallery-scene__button${isActive ? ' gallery-scene__button--active' : ''}`}
             >
               {label}
             </button>
