@@ -1,35 +1,39 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 
-vi.mock('../../lib/spotifyAuth', () => ({
+vi.mock('../../../spotify/auth/spotifyAuth', () => ({
   getValidSpotifyAccessToken: vi.fn(),
 }))
 
-import { getValidSpotifyAccessToken } from '../../lib/spotifyAuth'
-import { fetchLikedSongs } from '../../api/spotifyApi'
-import type { SpotifyTrackItem } from '../../api/spotifyApiModels'
-import { mapToTrack } from '../../utils/spotifyApiUtils'
+import { getValidSpotifyAccessToken } from '../../../spotify/auth/spotifyAuth'
+import { fetchLikedSongs } from '../../../spotify/api/spotifyApi'
+import type { SpotifyTrackItem } from '../../../spotify/api/spotifyApiModels'
+import { mapToTrack } from '../../../spotify/utils/spotifyApiUtils'
 
 const mockGetToken = vi.mocked(getValidSpotifyAccessToken)
 
-const makeTrackItem = (id: string): SpotifyTrackItem => ({
-  added_at: '2023-01-01T00:00:00Z',
-  track: {
-    id,
-    name: 'Song',
-    artists: [{ name: 'Artist' }],
-    album: {
-      name: 'Album',
-      release_date: '2020-01-01',
-      images: [{ url: `https://img/${id}.jpg`, width: 640, height: 640 }],
+function makeTrackItem(id: string): SpotifyTrackItem {
+  return {
+    added_at: '2023-01-01T00:00:00Z',
+    track: {
+      id,
+      name: 'Song',
+      artists: [{ name: 'Artist' }],
+      album: {
+        name: 'Album',
+        release_date: '2020-01-01',
+        images: [{ url: `https://img/${id}.jpg`, width: 640, height: 640 }],
+      },
     },
-  },
-})
+  }
+}
 
-const makePage = (items: SpotifyTrackItem[], next: string | null = null) => ({
-  ok: true,
-  status: 200,
-  json: async () => ({ items, next }),
-})
+function makePage(items: SpotifyTrackItem[], next: string | null = null) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ items, next }),
+  }
+}
 
 describe('mapToTrack', () => {
   const mockItem: SpotifyTrackItem = {

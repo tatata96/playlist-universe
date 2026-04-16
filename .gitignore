@@ -28,6 +28,3 @@ docs
 .env
 .env.example
 .superpowers/
-src-1
-network
-api-gov

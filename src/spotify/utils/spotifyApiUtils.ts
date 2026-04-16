@@ -1,4 +1,4 @@
-import type { Track } from '../types/spotify'
+import type { Track } from '../../types/spotify'
 import type { SpotifyTrack, SpotifyTrackItem } from '../api/spotifyApiModels'
 
 export function mapToTrack(item: SpotifyTrackItem & { track: SpotifyTrack }): Track {

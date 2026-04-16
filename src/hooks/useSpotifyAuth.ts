@@ -9,7 +9,7 @@ import {
   loadStoredTokens,
   maybeCompleteSpotifyLogin,
   type StoredSpotifyTokens,
-} from "../lib/spotifyAuth";
+} from "../spotify/auth/spotifyAuth";
 
 type SpotifyAuthState = {
   tokens: StoredSpotifyTokens | null;
@@ -20,7 +20,7 @@ type SpotifyAuthState = {
   scope: string;
 };
 
-export const useSpotifyAuth = (): SpotifyAuthState => {
+export function useSpotifyAuth(): SpotifyAuthState {
   const [tokens, setTokens] = useState<StoredSpotifyTokens | null>(() => loadStoredTokens());
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export const useSpotifyAuth = (): SpotifyAuthState => {
   useEffect(() => {
     let isMounted = true;
 
-    const initializeAuth = async () => {
+    async function initializeAuth() {
       try {
         getSpotifyClientId();
         getSpotifyRedirectUri();
@@ -51,7 +51,7 @@ export const useSpotifyAuth = (): SpotifyAuthState => {
           setIsLoading(false);
         }
       }
-    };
+    }
 
     void initializeAuth();
 
@@ -65,7 +65,7 @@ export const useSpotifyAuth = (): SpotifyAuthState => {
     isLoading,
     errorMessage,
     scope: getSpotifyScope(),
-    login: async () => {
+    async login() {
       setErrorMessage(null);
 
       try {
@@ -74,10 +74,10 @@ export const useSpotifyAuth = (): SpotifyAuthState => {
         setErrorMessage(error instanceof Error ? error.message : "Unable to start Spotify sign-in.");
       }
     },
-    logout: () => {
+    logout() {
       clearSpotifySession();
       setTokens(null);
       setErrorMessage(null);
     },
   };
-};
+}

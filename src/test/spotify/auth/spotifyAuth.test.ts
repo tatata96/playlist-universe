@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseRetryAfterMs } from './spotifyAuth'
+import { parseRetryAfterMs } from '../../../spotify/auth/spotifyAuth'
 
 describe('parseRetryAfterMs', () => {
   it('returns 1000ms on attempt 0 when header is null', () => {

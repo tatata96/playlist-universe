@@ -1,5 +1,5 @@
-import type { Track } from '../types/spotify'
-import { getValidSpotifyAccessToken } from '../lib/spotifyAuth'
+import type { Track } from '../../types/spotify'
+import { getValidSpotifyAccessToken } from '../auth/spotifyAuth'
 import type { SpotifyPage, SpotifyTrack, SpotifyTrackItem } from './spotifyApiModels'
 import { mapToTrack } from '../utils/spotifyApiUtils'
 
