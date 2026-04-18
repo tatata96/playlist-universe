@@ -41,6 +41,10 @@
   cursor: default;
 }
 
+.gallery-scene__button--pending {
+  opacity: 0.35;
+}
+
 .gallery-scene__back-button {
   position: fixed;
   top: 16px;

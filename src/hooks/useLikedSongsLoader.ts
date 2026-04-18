@@ -14,6 +14,7 @@ type Result = {
   totalCount: number
   stage: LoadingStage
   error: string | null
+  groqError: string | null
   isComplete: boolean
 }
 
@@ -24,6 +25,7 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
   const [totalCount, setTotalCount] = useState(0)
   const [stage, setStage] = useState<LoadingStage>('spotify')
   const [error, setError] = useState<string | null>(null)
+  const [groqError, setGroqError] = useState<string | null>(null)
   const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
     setTotalCount(0)
     setStage('spotify')
     setError(null)
+    setGroqError(null)
     setIsComplete(false)
     /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -48,16 +51,22 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
         if (cancelled) return
         setStage('groq')
         setTotalCount(result.length)
+        setTracks(result)
 
-        const enrichedTracks = await enrichTracksWithGroq(result, (progress) => {
+        try {
+          const enrichedTracks = await enrichTracksWithGroq(result, (progress) => {
+            if (cancelled) return
+            setEnrichedCount(progress.enrichedCount)
+            setTotalCount(progress.totalCount)
+          })
           if (cancelled) return
-          setEnrichedCount(progress.enrichedCount)
-          setTotalCount(progress.totalCount)
-        })
+          setTracks(enrichedTracks)
+        } catch (err: unknown) {
+          if (cancelled) return
+          setGroqError(err instanceof Error ? err.message : 'Could not enrich tracks.')
+        }
 
-        if (cancelled) return
-        setTracks(enrichedTracks)
-        setIsComplete(true)
+        if (!cancelled) setIsComplete(true)
       })
       .catch((err: unknown) => {
         if (cancelled) return
@@ -70,5 +79,5 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
     }
   }, [enabled])
 
-  return { tracks, loadedCount, enrichedCount, totalCount, stage, error, isComplete }
+  return { tracks, loadedCount, enrichedCount, totalCount, stage, error, groqError, isComplete }
 }

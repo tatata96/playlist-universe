@@ -9,6 +9,7 @@ import './gallery-scene.css'
 
 interface Props {
   tracks: Track[]
+  groqReady: boolean
   onBack: () => void
 }
 
@@ -23,6 +24,8 @@ type GroupByMode =
   | 'scene'
   | 'instrumentation'
   | 'popularityTier'
+
+const GROQ_MODES = new Set<GroupByMode>(['country', 'speed', 'genre', 'energy', 'scene', 'instrumentation', 'popularityTier'])
 
 const GROUP_BY_MODES: GroupByMode[] = [
   'scatter',
@@ -73,7 +76,7 @@ function getTrackGroup(track: Track, mode: GroupByMode) {
 // Module-level — does not depend on data
 const renderItem = createImageRenderer<Track>('image')
 
-export function GalleryScene({ tracks, onBack }: Props) {
+export function GalleryScene({ tracks, groqReady, onBack }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [groupByMode, setGroupByMode] = useState<GroupByMode>('scatter')
   const [playlist, setPlaylist] = useState<SpotifyPlaylist | null>(null)
@@ -198,11 +201,13 @@ export function GalleryScene({ tracks, onBack }: Props) {
       <div className="gallery-scene__group-buttons">
         {GROUP_BY_MODES.map((mode) => {
           const isActive = groupByMode === mode
+          const isDisabled = GROQ_MODES.has(mode) && !groqReady
           return (
             <button
               key={mode}
               onClick={() => handleSetGroupBy(mode)}
-              className={`gallery-scene__button${isActive ? ' gallery-scene__button--active' : ''}`}
+              disabled={isDisabled}
+              className={`gallery-scene__button${isActive ? ' gallery-scene__button--active' : ''}${isDisabled ? ' gallery-scene__button--pending' : ''}`}
             >
               {GROUP_BY_LABELS[mode]}
             </button>

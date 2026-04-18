@@ -68,6 +68,23 @@
   max-width: 420px;
 }
 
+.app-groq-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  color: #a03030;
+  letter-spacing: 0.04em;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid rgba(180, 50, 50, 0.25);
+  padding: 10px 20px;
+  max-width: 420px;
+  z-index: 100;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
