@@ -41,15 +41,30 @@
 }
 
 .app-back-button {
-  background: transparent;
-  border: 1px solid #e0ddd8;
-  color: #6b6860;
+  background: #fffdf5;
+  border: 2px solid #17120d;
+  border-radius: 0;
+  box-shadow: 4px 4px 0 #17120d;
+  color: #17120d;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.15em;
-  padding: 8px 20px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  padding: 10px 20px;
   text-transform: uppercase;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.app-back-button:hover,
+.app-back-button:focus-visible {
+  background: #ffe03f;
+  box-shadow: 2px 2px 0 #17120d;
+  outline: none;
+  transform: translate(2px, 2px);
 }
 
 .app-auth-error {
