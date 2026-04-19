@@ -1,10 +1,10 @@
-const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-20b'
+const DEFAULT_GROQ_MODEL = 'gemini-2.0-flash'
 const DEFAULT_GROQ_TRACK_BATCH_SIZE = 75
 
 export function getGroqApiKey() {
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY?.trim()
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim()
   if (!apiKey) {
-    throw new Error('Missing VITE_GROQ_API_KEY.')
+    throw new Error('Missing VITE_GEMINI_API_KEY.')
   }
 
   return apiKey

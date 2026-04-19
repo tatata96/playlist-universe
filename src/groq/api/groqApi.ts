@@ -3,7 +3,7 @@ import { getGroqApiKey, getGroqModel, getGroqTrackBatchSize } from '../auth/groq
 import { buildGroqTrackEnrichmentPrompt, mapTrackToGroqInput } from '../utils/groqApiUtils'
 import type { GroqChatCompletionResponse, GroqTrackEnrichment, GroqTrackEnrichmentResponse } from './groqApiModels'
 
-const GROQ_CHAT_COMPLETIONS_URL = 'https://api.groq.com/openai/v1/chat/completions'
+const GROQ_CHAT_COMPLETIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
 const GROQ_MAX_ATTEMPTS = 3
 const GROQ_RETRY_DELAYS_MS = [800, 1800]
 const GROQ_RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504])
