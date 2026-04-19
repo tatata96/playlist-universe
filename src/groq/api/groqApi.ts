@@ -7,6 +7,7 @@ const GROQ_CHAT_COMPLETIONS_URL = 'https://generativelanguage.googleapis.com/v1b
 const GROQ_MAX_ATTEMPTS = 3
 const GROQ_RETRY_DELAYS_MS = [800, 1800]
 const GROQ_RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504])
+const GROQ_CACHE_KEY = 'playlist-universe:track-enrichments:v1'
 
 type EnrichmentProgress = {
   enrichedCount: number
@@ -35,6 +36,65 @@ function chunkTracks(tracks: Track[], batchSize: number) {
 
 function wait(ms: number) {
   return new Promise((resolve) => globalThis.setTimeout(resolve, ms))
+}
+
+function parseRetryAfterMs(value: string | null) {
+  if (!value) return null
+
+  const seconds = Number(value)
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000
+  }
+
+  const dateMs = Date.parse(value)
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - Date.now())
+  }
+
+  return null
+}
+
+function getRetryDelayMs(response: Response, attempt: number) {
+  return parseRetryAfterMs(response.headers?.get('retry-after') ?? null) ?? GROQ_RETRY_DELAYS_MS[attempt - 1]
+}
+
+function readCachedEnrichments() {
+  if (typeof localStorage === 'undefined') return new Map<string, GroqTrackEnrichment>()
+
+  try {
+    const rawCache = localStorage.getItem(GROQ_CACHE_KEY)
+    if (!rawCache) return new Map<string, GroqTrackEnrichment>()
+
+    const parsed = JSON.parse(rawCache) as Record<string, GroqTrackEnrichment>
+    return new Map(Object.entries(parsed))
+  } catch {
+    return new Map<string, GroqTrackEnrichment>()
+  }
+}
+
+function writeCachedEnrichments(enrichments: Map<string, GroqTrackEnrichment>) {
+  if (typeof localStorage === 'undefined') return
+
+  try {
+    localStorage.setItem(GROQ_CACHE_KEY, JSON.stringify(Object.fromEntries(enrichments)))
+  } catch {
+    // Cache writes are best effort; enrichment should still work without storage.
+  }
+}
+
+function parseGroqJson<T>(text: string): T {
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)?.[1]
+      ?? text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)
+
+    try {
+      return JSON.parse(jsonMatch) as T
+    } catch {
+      throw new Error('Gemini returned invalid JSON.')
+    }
+  }
 }
 
 function buildGroqChatRequest(apiKey: string, model: string, prompt: string): RequestInit {
@@ -76,14 +136,14 @@ async function readGroqErrorDetail(response: Response) {
 
 function getGroqFailureMessage(status: number, detail: string) {
   if (status === 429) {
-    return `Groq is rate limited right now (HTTP ${status}). Please try again in a moment.${detail}`
+    return `Gemini is rate limited right now (HTTP ${status}). Please try again in a moment.${detail}`
   }
 
   if (status >= 500) {
-    return `Groq is temporarily unavailable (HTTP ${status}). Please try again in a moment.${detail}`
+    return `Gemini is temporarily unavailable (HTTP ${status}). Please try again in a moment.${detail}`
   }
 
-  return `Groq request failed (HTTP ${status}).${detail}`
+  return `Gemini request failed (HTTP ${status}).${detail}`
 }
 
 async function groqGenerateJson<T>(prompt: string): Promise<T> {
@@ -99,7 +159,7 @@ async function groqGenerateJson<T>(prompt: string): Promise<T> {
       break
     }
 
-    await wait(GROQ_RETRY_DELAYS_MS[attempt - 1])
+    await wait(getRetryDelayMs(response, attempt))
   }
 
   if (!response?.ok) {
@@ -109,13 +169,18 @@ async function groqGenerateJson<T>(prompt: string): Promise<T> {
   }
 
   const body = await response.json() as GroqChatCompletionResponse
-  const text = body.choices?.[0]?.message?.content
+  const choice = body.choices?.[0]
+  const text = choice?.message?.content
 
   if (!text) {
-    throw new Error('Groq returned an empty response.')
+    throw new Error('Gemini returned an empty response.')
   }
 
-  return JSON.parse(text) as T
+  if (choice?.finish_reason === 'length') {
+    throw new GroqApiError(413, 'Gemini response was truncated before it finished returning JSON.')
+  }
+
+  return parseGroqJson<T>(text)
 }
 
 async function enrichTrackChunkWithGroq(chunk: Track[]): Promise<GroqTrackEnrichment[]> {
@@ -144,20 +209,34 @@ export async function enrichTracksWithGroq(
   if (tracks.length === 0) return []
 
   const batchSize = getGroqTrackBatchSize()
-  const enrichments: GroqTrackEnrichment[] = []
+  const cachedEnrichments = readCachedEnrichments()
+  const enrichments = new Map(cachedEnrichments)
+  const uncachedTracks = tracks.filter((track) => !cachedEnrichments.has(track.id))
 
-  for (const chunk of chunkTracks(tracks, batchSize)) {
-    enrichments.push(...await enrichTrackChunkWithGroq(chunk))
+  if (uncachedTracks.length !== tracks.length) {
     onProgress?.({
-      enrichedCount: Math.min(enrichments.length, tracks.length),
+      enrichedCount: tracks.length - uncachedTracks.length,
       totalCount: tracks.length,
     })
   }
 
-  const enrichmentById = new Map(enrichments.map((item) => [item.id, item]))
+  for (const chunk of chunkTracks(uncachedTracks, batchSize)) {
+    const chunkEnrichments = await enrichTrackChunkWithGroq(chunk)
+    for (const enrichment of chunkEnrichments) {
+      enrichments.set(enrichment.id, enrichment)
+    }
+    writeCachedEnrichments(enrichments)
+    onProgress?.({
+      enrichedCount: Math.min(
+        tracks.filter((track) => enrichments.has(track.id)).length,
+        tracks.length,
+      ),
+      totalCount: tracks.length,
+    })
+  }
 
   return tracks.map((track) => ({
     ...track,
-    ...enrichmentById.get(track.id),
+    ...enrichments.get(track.id),
   }))
 }

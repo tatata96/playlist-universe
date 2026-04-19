@@ -45,13 +45,10 @@ export default function App() {
     setLoaderEnabled(false)
     if (liked.error) {
       // Spotify failure — full-page error
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage(liked.error)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setView('error')
     } else if (liked.groqError) {
       // Groq failure — non-fatal toast
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGroqToast(liked.groqError)
     }
   }, [liked.isComplete, liked.error, liked.groqError])

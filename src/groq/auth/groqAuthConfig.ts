@@ -1,5 +1,5 @@
-const DEFAULT_GROQ_MODEL = 'gemini-2.0-flash'
-const DEFAULT_GROQ_TRACK_BATCH_SIZE = 75
+const DEFAULT_GROQ_MODEL = 'gemini-2.5-flash-lite'
+const DEFAULT_GROQ_TRACK_BATCH_SIZE = 20
 
 export function getGroqApiKey() {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim()

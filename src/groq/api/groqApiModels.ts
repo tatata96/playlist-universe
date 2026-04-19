@@ -25,6 +25,7 @@ export type GroqTrackEnrichmentResponse = {
 
 export type GroqChatCompletionResponse = {
   choices?: Array<{
+    finish_reason?: string | null
     message?: {
       content?: string | null
     }
