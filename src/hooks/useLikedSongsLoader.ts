@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import type { Track } from '../types/spotify'
 import { fetchLikedSongs } from '../spotify/api/spotifyApi'
-import { enrichTracksWithGroq } from '../groq/api/groqApi'
+import { enrichTracksWithGemini } from '../gemini/api/geminiApi'
 
 type Options = { enabled: boolean }
 
-type LoadingStage = 'spotify' | 'groq'
+type LoadingStage = 'spotify' | 'gemini'
 
 type Result = {
   tracks: Track[]
@@ -14,7 +14,7 @@ type Result = {
   totalCount: number
   stage: LoadingStage
   error: string | null
-  groqError: string | null
+  geminiError: string | null
   isComplete: boolean
 }
 
@@ -25,7 +25,7 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
   const [totalCount, setTotalCount] = useState(0)
   const [stage, setStage] = useState<LoadingStage>('spotify')
   const [error, setError] = useState<string | null>(null)
-  const [groqError, setGroqError] = useState<string | null>(null)
+  const [geminiError, setGeminiError] = useState<string | null>(null)
   const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
     setTotalCount(0)
     setStage('spotify')
     setError(null)
-    setGroqError(null)
+    setGeminiError(null)
     setIsComplete(false)
     /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -49,12 +49,12 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
     })
       .then(async (result) => {
         if (cancelled) return
-        setStage('groq')
+        setStage('gemini')
         setTotalCount(result.length)
         setTracks(result)
 
         try {
-          const enrichedTracks = await enrichTracksWithGroq(result, (progress) => {
+          const enrichedTracks = await enrichTracksWithGemini(result, (progress) => {
             if (cancelled) return
             setEnrichedCount(progress.enrichedCount)
             setTotalCount(progress.totalCount)
@@ -63,7 +63,7 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
           setTracks(enrichedTracks)
         } catch (err: unknown) {
           if (cancelled) return
-          setGroqError(err instanceof Error ? err.message : 'Could not enrich tracks.')
+          setGeminiError(err instanceof Error ? err.message : 'Could not enrich tracks.')
         }
 
         if (!cancelled) setIsComplete(true)
@@ -79,5 +79,5 @@ export function useLikedSongsLoader({ enabled }: Options): Result {
     }
   }, [enabled])
 
-  return { tracks, loadedCount, enrichedCount, totalCount, stage, error, groqError, isComplete }
+  return { tracks, loadedCount, enrichedCount, totalCount, stage, error, geminiError, isComplete }
 }

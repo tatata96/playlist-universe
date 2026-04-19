@@ -14,7 +14,7 @@ export default function App() {
   const [view, setView] = useState<View>('mode-select')
   const [loaderEnabled, setLoaderEnabled] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [groqToast, setGroqToast] = useState<string | null>(null)
+  const [geminiToast, setGeminiToast] = useState<string | null>(null)
 
   const liked = useLikedSongsLoader({ enabled: loaderEnabled })
 
@@ -30,9 +30,9 @@ export default function App() {
     setView('liked-loading')
   }, [authLoading, tokens])
 
-  // Spotify done → show gallery immediately, Groq continues in background
+  // Spotify done → show gallery immediately, Gemini continues in background
   useEffect(() => {
-    if (liked.stage === 'groq' && view === 'liked-loading') {
+    if (liked.stage === 'gemini' && view === 'liked-loading') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setView('gallery')
     }
@@ -47,18 +47,18 @@ export default function App() {
       // Spotify failure — full-page error
       setErrorMessage(liked.error)
       setView('error')
-    } else if (liked.groqError) {
-      // Groq failure — non-fatal toast
-      setGroqToast(liked.groqError)
+    } else if (liked.geminiError) {
+      // Gemini failure — non-fatal toast
+      setGeminiToast(liked.geminiError)
     }
-  }, [liked.isComplete, liked.error, liked.groqError])
+  }, [liked.isComplete, liked.error, liked.geminiError])
 
-  // Auto-dismiss groq error toast
+  // Auto-dismiss gemini error toast
   useEffect(() => {
-    if (!groqToast) return
-    const t = window.setTimeout(() => setGroqToast(null), 5000)
+    if (!geminiToast) return
+    const t = window.setTimeout(() => setGeminiToast(null), 5000)
     return () => window.clearTimeout(t)
-  }, [groqToast])
+  }, [geminiToast])
 
   const handleBegin = async () => {
     if (tokens) {
@@ -74,7 +74,7 @@ export default function App() {
     setLoaderEnabled(false)
     setView('mode-select')
     setErrorMessage(null)
-    setGroqToast(null)
+    setGeminiToast(null)
   }
 
   if (view === 'gallery') {
@@ -82,11 +82,11 @@ export default function App() {
       <>
         <GalleryScene
           tracks={liked.tracks}
-          groqReady={liked.isComplete && !liked.groqError}
+          geminiReady={liked.isComplete && !liked.geminiError}
           onBack={reset}
         />
-        {groqToast && (
-          <div className="app-groq-toast">{groqToast}</div>
+        {geminiToast && (
+          <div className="app-gemini-toast">{geminiToast}</div>
         )}
       </>
     )

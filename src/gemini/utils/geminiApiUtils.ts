@@ -1,7 +1,7 @@
 import type { Track } from '../../types/spotify'
-import type { GroqTrackInput } from '../api/groqApiModels'
+import type { GeminiTrackInput } from '../api/geminiApiModels'
 
-export function mapTrackToGroqInput(track: Track): GroqTrackInput {
+export function mapTrackToGeminiInput(track: Track): GeminiTrackInput {
   return {
     id: track.id,
     title: track.title,
@@ -11,7 +11,7 @@ export function mapTrackToGroqInput(track: Track): GroqTrackInput {
   }
 }
 
-export function buildGroqTrackEnrichmentPrompt(tracks: GroqTrackInput[]) {
+export function buildGeminiTrackEnrichmentPrompt(tracks: GeminiTrackInput[]) {
   return `
 Analyze these Spotify tracks and return exactly one JSON object with this shape:
 {

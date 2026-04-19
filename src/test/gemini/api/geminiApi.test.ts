@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { Track } from '../../../types/spotify'
 
-vi.mock('../../../groq/auth/groqAuthConfig', () => ({
-  getGroqApiKey: vi.fn(() => 'mock-gemini-key'),
-  getGroqModel: vi.fn(() => 'gemini-2.5-flash-lite'),
-  getGroqTrackBatchSize: vi.fn(() => 2),
+vi.mock('../../../gemini/auth/geminiAuthConfig', () => ({
+  getGeminiApiKey: vi.fn(() => 'mock-gemini-key'),
+  getGeminiModel: vi.fn(() => 'gemini-2.5-flash-lite'),
+  getGeminiTrackBatchSize: vi.fn(() => 2),
 }))
 
-import { enrichTracksWithGroq } from '../../../groq/api/groqApi'
+import { enrichTracksWithGemini } from '../../../gemini/api/geminiApi'
 
 function makeTrack(id: string): Track {
   return {
@@ -21,7 +21,7 @@ function makeTrack(id: string): Track {
   }
 }
 
-function makeGroqResponse(content: string, finishReason: string | null = 'stop') {
+function makeGeminiResponse(content: string, finishReason: string | null = 'stop') {
   return {
     ok: true,
     status: 200,
@@ -36,7 +36,7 @@ function makeGroqResponse(content: string, finishReason: string | null = 'stop')
   } as unknown as Response
 }
 
-function makeGroqErrorResponse(status: number, message = 'Request failed', retryAfter: string | null = null) {
+function makeGeminiErrorResponse(status: number, message = 'Request failed', retryAfter: string | null = null) {
   return {
     ok: false,
     status,
@@ -47,7 +47,7 @@ function makeGroqErrorResponse(status: number, message = 'Request failed', retry
   } as unknown as Response
 }
 
-describe('enrichTracksWithGroq', () => {
+describe('enrichTracksWithGemini', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
   })
@@ -58,7 +58,7 @@ describe('enrichTracksWithGroq', () => {
   })
 
   it('sends tracks to Gemini with JSON object response mode', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+    vi.mocked(fetch).mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
       tracks: [
         {
           id: 'a',
@@ -73,7 +73,7 @@ describe('enrichTracksWithGroq', () => {
       ],
     })))
 
-    const [track] = await enrichTracksWithGroq([makeTrack('a')])
+    const [track] = await enrichTracksWithGemini([makeTrack('a')])
 
     expect(fetch).toHaveBeenCalledWith(
       'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
@@ -112,7 +112,7 @@ describe('enrichTracksWithGroq', () => {
 
   it('batches requests and reports enrichment progress', async () => {
     vi.mocked(fetch)
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'a',
@@ -136,7 +136,7 @@ describe('enrichTracksWithGroq', () => {
           },
         ],
       })))
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'c',
@@ -152,7 +152,7 @@ describe('enrichTracksWithGroq', () => {
       })))
 
     const onProgress = vi.fn()
-    const tracks = await enrichTracksWithGroq([
+    const tracks = await enrichTracksWithGemini([
       makeTrack('a'),
       makeTrack('b'),
       makeTrack('c'),
@@ -164,8 +164,8 @@ describe('enrichTracksWithGroq', () => {
     expect(tracks.map((track) => track.country)).toEqual(['United States', 'Turkey', 'France'])
   })
 
-  it('keeps the original track fields when Groq omits an id', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+  it('keeps the original track fields when Gemini omits an id', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
       tracks: [
         {
           id: 'a',
@@ -180,7 +180,7 @@ describe('enrichTracksWithGroq', () => {
       ],
     })))
 
-    const tracks = await enrichTracksWithGroq([makeTrack('a'), makeTrack('missing')])
+    const tracks = await enrichTracksWithGemini([makeTrack('a'), makeTrack('missing')])
 
     expect(tracks[1]).toEqual(makeTrack('missing'))
   })
@@ -188,8 +188,8 @@ describe('enrichTracksWithGroq', () => {
   it('retries temporary Gemini capacity errors', async () => {
     vi.useFakeTimers()
     vi.mocked(fetch)
-      .mockResolvedValueOnce(makeGroqErrorResponse(503, 'Service unavailable.'))
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiErrorResponse(503, 'Service unavailable.'))
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'a',
@@ -204,7 +204,7 @@ describe('enrichTracksWithGroq', () => {
         ],
       })))
 
-    const enrichment = enrichTracksWithGroq([makeTrack('a')])
+    const enrichment = enrichTracksWithGemini([makeTrack('a')])
 
     await vi.advanceTimersByTimeAsync(800)
 
@@ -220,8 +220,8 @@ describe('enrichTracksWithGroq', () => {
   it('respects Retry-After when retrying rate limits', async () => {
     vi.useFakeTimers()
     vi.mocked(fetch)
-      .mockResolvedValueOnce(makeGroqErrorResponse(429, 'Rate limited.', '3'))
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiErrorResponse(429, 'Rate limited.', '3'))
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'a',
@@ -236,7 +236,7 @@ describe('enrichTracksWithGroq', () => {
         ],
       })))
 
-    const enrichment = enrichTracksWithGroq([makeTrack('a')])
+    const enrichment = enrichTracksWithGemini([makeTrack('a')])
 
     await vi.advanceTimersByTimeAsync(2999)
     expect(fetch).toHaveBeenCalledTimes(1)
@@ -270,7 +270,7 @@ describe('enrichTracksWithGroq', () => {
     }
     vi.stubGlobal('localStorage', localStorageMock)
 
-    vi.mocked(fetch).mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+    vi.mocked(fetch).mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
       tracks: [
         {
           id: 'b',
@@ -286,7 +286,7 @@ describe('enrichTracksWithGroq', () => {
     })))
 
     const onProgress = vi.fn()
-    const tracks = await enrichTracksWithGroq([makeTrack('a'), makeTrack('b')], onProgress)
+    const tracks = await enrichTracksWithGemini([makeTrack('a'), makeTrack('b')], onProgress)
 
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(tracks.map((track) => track.country)).toEqual(['United States', 'Turkey'])
@@ -295,7 +295,7 @@ describe('enrichTracksWithGroq', () => {
   })
 
   it('accepts fenced JSON returned by Gemini', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(makeGroqResponse(`\`\`\`json
+    vi.mocked(fetch).mockResolvedValueOnce(makeGeminiResponse(`\`\`\`json
 {
   "tracks": [
     {
@@ -312,21 +312,21 @@ describe('enrichTracksWithGroq', () => {
 }
 \`\`\``))
 
-    const tracks = await enrichTracksWithGroq([makeTrack('a')])
+    const tracks = await enrichTracksWithGemini([makeTrack('a')])
 
     expect(tracks[0].country).toBe('United States')
   })
 
   it('throws a clear error when Gemini returns invalid JSON', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(makeGroqResponse('not json'))
+    vi.mocked(fetch).mockResolvedValueOnce(makeGeminiResponse('not json'))
 
-    await expect(enrichTracksWithGroq([makeTrack('a')])).rejects.toThrow('Gemini returned invalid JSON')
+    await expect(enrichTracksWithGemini([makeTrack('a')])).rejects.toThrow('Gemini returned invalid JSON')
   })
 
   it('splits an oversized batch and retries smaller chunks', async () => {
     vi.mocked(fetch)
-      .mockResolvedValueOnce(makeGroqErrorResponse(413, 'Request too large for model.'))
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiErrorResponse(413, 'Request too large for model.'))
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'a',
@@ -340,7 +340,7 @@ describe('enrichTracksWithGroq', () => {
           },
         ],
       })))
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'b',
@@ -355,7 +355,7 @@ describe('enrichTracksWithGroq', () => {
         ],
       })))
 
-    const tracks = await enrichTracksWithGroq([makeTrack('a'), makeTrack('b')])
+    const tracks = await enrichTracksWithGemini([makeTrack('a'), makeTrack('b')])
 
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(tracks.map((track) => track.country)).toEqual(['United States', 'Turkey'])
@@ -363,8 +363,8 @@ describe('enrichTracksWithGroq', () => {
 
   it('splits a batch when Gemini truncates the JSON response', async () => {
     vi.mocked(fetch)
-      .mockResolvedValueOnce(makeGroqResponse('{"tracks":[{"id":"a"', 'length'))
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiResponse('{"tracks":[{"id":"a"', 'length'))
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'a',
@@ -378,7 +378,7 @@ describe('enrichTracksWithGroq', () => {
           },
         ],
       })))
-      .mockResolvedValueOnce(makeGroqResponse(JSON.stringify({
+      .mockResolvedValueOnce(makeGeminiResponse(JSON.stringify({
         tracks: [
           {
             id: 'b',
@@ -393,16 +393,16 @@ describe('enrichTracksWithGroq', () => {
         ],
       })))
 
-    const tracks = await enrichTracksWithGroq([makeTrack('a'), makeTrack('b')])
+    const tracks = await enrichTracksWithGemini([makeTrack('a'), makeTrack('b')])
 
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(tracks.map((track) => track.country)).toEqual(['United States', 'Turkey'])
   })
 
   it('throws when Gemini returns a failed response', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(makeGroqErrorResponse(400, 'Invalid API key.'))
+    vi.mocked(fetch).mockResolvedValueOnce(makeGeminiErrorResponse(400, 'Invalid API key.'))
 
-    await expect(enrichTracksWithGroq([makeTrack('a')])).rejects.toThrow('Gemini request failed')
+    await expect(enrichTracksWithGemini([makeTrack('a')])).rejects.toThrow('Gemini request failed')
   })
 
   it('throws when Gemini returns no text', async () => {
@@ -412,6 +412,6 @@ describe('enrichTracksWithGroq', () => {
       json: async () => ({ choices: [{ message: { content: null } }] }),
     } as unknown as Response)
 
-    await expect(enrichTracksWithGroq([makeTrack('a')])).rejects.toThrow('Gemini returned an empty response')
+    await expect(enrichTracksWithGemini([makeTrack('a')])).rejects.toThrow('Gemini returned an empty response')
   })
 })

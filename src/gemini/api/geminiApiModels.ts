@@ -1,6 +1,6 @@
 import type { PopularityTier, TrackSpeed } from '../../types/spotify'
 
-export type GroqTrackInput = {
+export type GeminiTrackInput = {
   id: string
   title: string
   artist: string
@@ -8,7 +8,7 @@ export type GroqTrackInput = {
   releaseDate: string
 }
 
-export type GroqTrackEnrichment = {
+export type GeminiTrackEnrichment = {
   id: string
   country: string
   speed: TrackSpeed
@@ -19,11 +19,11 @@ export type GroqTrackEnrichment = {
   popularityTier: PopularityTier
 }
 
-export type GroqTrackEnrichmentResponse = {
-  tracks: GroqTrackEnrichment[]
+export type GeminiTrackEnrichmentResponse = {
+  tracks: GeminiTrackEnrichment[]
 }
 
-export type GroqChatCompletionResponse = {
+export type GeminiChatCompletionResponse = {
   choices?: Array<{
     finish_reason?: string | null
     message?: {
