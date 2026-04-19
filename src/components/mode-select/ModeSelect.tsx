@@ -28,7 +28,6 @@ export function ModeSelect({ onBegin }: Props) {
         <div className="mode-select__card mode-select__card--invite">
           <div className="mode-select__badge">Save file 01</div>
 
-          <div className="mode-select__icon" aria-hidden="true">HEART</div>
           <div className="mode-select__card-title">
             Liked Songs
           </div>
