@@ -1,5 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { useUniverseCore, UniverseCanvas, createItems, createImageRenderer } from 'gallery-universe'
+import type { CSSProperties } from 'react'
+import {
+  useUniverseCore,
+  UniverseCanvas,
+  CategoryNav,
+  createItems,
+  createImageRenderer,
+} from 'gallery-universe'
 import type { RenderItem, UniverseItem } from 'gallery-universe'
 import type { Track } from '../../types/spotify'
 import type { SpotifyPlaylist } from '../../spotify/api/spotifyApiModels'
@@ -52,6 +59,10 @@ const GROUP_BY_LABELS: Record<GroupByMode, string> = {
   instrumentation: 'By Sound',
   popularityTier: 'By Popularity',
 }
+
+const categoryNavPlayerOffset = {
+  bottom: 116,
+} satisfies CSSProperties
 
 function getEnergyBucket(energy?: number) {
   if (energy == null) return 'unknown'
@@ -185,6 +196,24 @@ export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
     return null
   }, [groupByMode])
 
+  const groups = useMemo(() => {
+    if (groupByMode === 'scatter') return []
+
+    const counts = new Map<string, number>()
+    for (const track of tracks) {
+      const key = getTrackGroup(track, groupByMode)
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+
+    return [...counts.entries()]
+      .map(([key, count]) => ({ key, count }))
+      .sort((a, b) => {
+        if (a.key === 'unknown') return 1
+        if (b.key === 'unknown') return -1
+        return a.key.localeCompare(b.key, undefined, { numeric: true })
+      })
+  }, [groupByMode, tracks])
+
   const selectedTrack = selectedIndex !== null ? tracks[selectedIndex] : null
 
   return (
@@ -214,6 +243,14 @@ export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
           )
         })}
       </div>
+
+      <CategoryNav
+        groups={groups}
+        cameraRef={core.cameraRef}
+        groupCentersRef={core.groupCentersRef}
+        onSelect={(key) => core.navigateToGroup(key)}
+        outerStyle={selectedTrack ? categoryNavPlayerOffset : undefined}
+      />
 
       <div className="gallery-scene__playlist-controls">
         {!playlist && (
