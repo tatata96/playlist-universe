@@ -258,7 +258,7 @@ export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
       </div>
 
       <UniverseCanvas
-        core={{ ...core, animationState: core.animRef }}
+        core={core}
         width={window.innerWidth}
         height={window.innerHeight}
         renderItem={renderItem}

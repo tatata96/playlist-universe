@@ -29,7 +29,7 @@ export function ModeSelect({ onBegin }: Props) {
           <div className="mode-select__badge">Save file 01</div>
 
           <div className="mode-select__card-title">
-            Liked Songs
+            Fly Through Your Liked Songs
           </div>
           <p className="mode-select__description">
             Launch your saved tracks into orbit
