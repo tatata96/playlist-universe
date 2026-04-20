@@ -88,6 +88,7 @@ function getTrackGroup(track: Track, mode: GroupByMode) {
 const renderItem = createImageRenderer<Track>('image')
 
 export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
+  const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [groupByMode, setGroupByMode] = useState<GroupByMode>('scatter')
   const [playlist, setPlaylist] = useState<SpotifyPlaylist | null>(null)
@@ -97,6 +98,14 @@ export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
   const [playlistName, setPlaylistName] = useState('')
   const [playlistError, setPlaylistError] = useState<string | null>(null)
   const [playlistTag, setPlaylistTag] = useState<string | null>(null)
+
+  useEffect(() => {
+    function handleResize() {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight })
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     if (!playlistTag) return
@@ -296,8 +305,8 @@ export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
 
       <UniverseCanvas
         core={core}
-        width={window.innerWidth}
-        height={window.innerHeight}
+        width={dimensions.width}
+        height={dimensions.height}
         renderItem={renderItem}
         groupBy={groupByFn}
       />
