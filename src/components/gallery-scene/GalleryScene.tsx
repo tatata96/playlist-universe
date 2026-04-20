@@ -191,6 +191,13 @@ export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
     setSelectedIndex((prev) => (prev === null ? null : (prev + 1) % tracks.length))
   }, [tracks.length])
 
+  // Keep gallery highlight in sync with selectedIndex (e.g. when auto-advancing)
+  useEffect(() => {
+    if (selectedIndex === null) return
+    const item = items[selectedIndex]
+    if (item) core.handleItemClick(item)
+  }, [selectedIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSetGroupBy = (mode: GroupByMode) => {
     setGroupByMode(mode)
     if (mode === 'scatter') {
