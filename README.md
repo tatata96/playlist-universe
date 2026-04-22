@@ -4,6 +4,14 @@ Playlist Universe lets you fly through your Spotify liked songs as a little gala
 
 The app is currently invite-only while in development. Spotify users must be added to the Spotify developer app before they can complete authorization.
 
+
+
+https://github.com/user-attachments/assets/5b57e411-e807-42cd-b76c-e2b2abcba5b5
+
+
+
+
+
 ## Features
 
 - Spotify sign-in with PKCE.
@@ -26,6 +34,8 @@ Create a `.env.local` file in the project root:
 ```env
 VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
 VITE_SPOTIFY_REDIRECT_URI=http://127.0.0.1:5173/
+
+
 VITE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
