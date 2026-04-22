@@ -74,10 +74,15 @@ export function SpotifyPlayer({ track, onNext }: Props) {
         { uri: `spotify:track:${trackRef.current.id}`, height: 80 },
         (controller) => {
           controllerRef.current = controller
+          let wasPlaying = false
           controller.addListener('playback_update', (e) => {
             const { isPaused, position, duration } = e.data
-            // position > 0 guards against false positives on initial load
-            if (isPaused && duration > 0 && position > 0 && position >= duration - 1) {
+            if (!isPaused && position > 1) wasPlaying = true
+            // Track ends: Spotify either holds at end or resets position to 0
+            const atEnd = duration > 0 && position >= duration - 1
+            const resetToStart = position < 1
+            if (isPaused && wasPlaying && (atEnd || resetToStart)) {
+              wasPlaying = false
               onNextRef.current()
             }
           })

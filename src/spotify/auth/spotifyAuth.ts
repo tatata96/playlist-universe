@@ -21,9 +21,11 @@ import {
   postSpotifyToken,
   refreshSpotifyAccessToken,
   parseRetryAfterMs,
+  isSpotifyInvalidGrantError,
 } from './spotifyTokenApi'
 
 const SPOTIFY_AUTHORIZE_URL = 'https://accounts.spotify.com/authorize'
+export const SPOTIFY_SESSION_CLEARED_EVENT = 'spotify-auth-session-cleared'
 
 let loginCompletionPromise: Promise<StoredSpotifyTokens | null> | null = null
 
@@ -140,6 +142,7 @@ async function completeSpotifyLogin() {
 export function clearSpotifySession() {
   clearPkceSessionStorage()
   clearStoredTokens()
+  window.dispatchEvent(new Event(SPOTIFY_SESSION_CLEARED_EVENT))
 }
 
 export async function getValidSpotifyAccessToken() {
@@ -152,8 +155,20 @@ export async function getValidSpotifyAccessToken() {
     return tokens.accessToken
   }
 
-  const refreshedTokens = await refreshSpotifyAccessToken(tokens)
-  return refreshedTokens.accessToken
+  try {
+    const refreshedTokens = await refreshSpotifyAccessToken(tokens)
+    return refreshedTokens.accessToken
+  } catch (error) {
+    if (
+      isSpotifyInvalidGrantError(error) ||
+      (error instanceof Error && /Missing Spotify refresh token/.test(error.message))
+    ) {
+      clearSpotifySession()
+      throw new Error('Spotify sign-in expired. Please sign in again.')
+    }
+
+    throw error
+  }
 }
 
 export {

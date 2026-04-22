@@ -8,6 +8,7 @@ import {
   getSpotifyScope,
   loadStoredTokens,
   maybeCompleteSpotifyLogin,
+  SPOTIFY_SESSION_CLEARED_EVENT,
   type StoredSpotifyTokens,
 } from "../spotify/auth/spotifyAuth";
 
@@ -27,6 +28,12 @@ export function useSpotifyAuth(): SpotifyAuthState {
 
   useEffect(() => {
     let isMounted = true;
+
+    function handleSessionCleared() {
+      setTokens(null);
+    }
+
+    window.addEventListener(SPOTIFY_SESSION_CLEARED_EVENT, handleSessionCleared);
 
     async function initializeAuth() {
       try {
@@ -57,6 +64,7 @@ export function useSpotifyAuth(): SpotifyAuthState {
 
     return () => {
       isMounted = false;
+      window.removeEventListener(SPOTIFY_SESSION_CLEARED_EVENT, handleSessionCleared);
     };
   }, []);
 

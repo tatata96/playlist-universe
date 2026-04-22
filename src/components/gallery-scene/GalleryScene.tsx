@@ -1,5 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { useUniverseCore, UniverseCanvas, createItems, createImageRenderer } from 'gallery-universe'
+import type { CSSProperties } from 'react'
+import {
+  useUniverseCore,
+  UniverseCanvas,
+  CategoryNav,
+  createItems,
+  createImageRenderer,
+} from 'gallery-universe'
 import type { RenderItem, UniverseItem } from 'gallery-universe'
 import type { Track } from '../../types/spotify'
 import type { SpotifyPlaylist } from '../../spotify/api/spotifyApiModels'
@@ -9,15 +16,79 @@ import './gallery-scene.css'
 
 interface Props {
   tracks: Track[]
+  geminiReady: boolean
   onBack: () => void
 }
 
-type GroupByMode = 'scatter' | 'year' | 'added'
+type GroupByMode =
+  | 'scatter'
+  | 'year'
+  | 'added'
+  | 'country'
+  | 'speed'
+  | 'genre'
+  | 'energy'
+  | 'scene'
+  | 'instrumentation'
+  | 'popularityTier'
+
+const GEMINI_MODES = new Set<GroupByMode>(['country', 'speed', 'genre', 'energy', 'scene', 'instrumentation', 'popularityTier'])
+
+const GROUP_BY_MODES: GroupByMode[] = [
+  'scatter',
+  'year',
+  'added',
+  'country',
+  'speed',
+  'genre',
+  'energy',
+  'scene',
+  'instrumentation',
+  'popularityTier',
+]
+
+const GROUP_BY_LABELS: Record<GroupByMode, string> = {
+  scatter: 'Scatter',
+  year: 'By Year',
+  added: 'By Added',
+  country: 'By Country',
+  speed: 'By Speed',
+  genre: 'By Genre',
+  energy: 'By Energy',
+  scene: 'By Scene',
+  instrumentation: 'By Sound',
+  popularityTier: 'By Popularity',
+}
+
+const categoryNavPlayerOffset = {
+  bottom: 116,
+} satisfies CSSProperties
+
+function getEnergyBucket(energy?: number) {
+  if (energy == null) return 'unknown'
+  if (energy < 35) return 'low'
+  if (energy < 70) return 'medium'
+  return 'high'
+}
+
+function getTrackGroup(track: Track, mode: GroupByMode) {
+  if (mode === 'year') return track.releaseDate.slice(0, 4)
+  if (mode === 'added') return track.addedAt.slice(0, 7)
+  if (mode === 'country') return track.country ?? 'unknown'
+  if (mode === 'speed') return track.speed ?? 'unknown'
+  if (mode === 'genre') return track.genre?.[0] ?? 'unknown'
+  if (mode === 'energy') return getEnergyBucket(track.energy)
+  if (mode === 'scene') return track.scene?.[0] ?? 'unknown'
+  if (mode === 'instrumentation') return track.instrumentation?.[0] ?? 'unknown'
+  if (mode === 'popularityTier') return track.popularityTier ?? 'unknown'
+  return 'scatter'
+}
 
 // Module-level — does not depend on data
 const renderItem = createImageRenderer<Track>('image')
 
-export function GalleryScene({ tracks, onBack }: Props) {
+export function GalleryScene({ tracks, geminiReady, onBack }: Props) {
+  const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [groupByMode, setGroupByMode] = useState<GroupByMode>('scatter')
   const [playlist, setPlaylist] = useState<SpotifyPlaylist | null>(null)
@@ -27,6 +98,14 @@ export function GalleryScene({ tracks, onBack }: Props) {
   const [playlistName, setPlaylistName] = useState('')
   const [playlistError, setPlaylistError] = useState<string | null>(null)
   const [playlistTag, setPlaylistTag] = useState<string | null>(null)
+
+  useEffect(() => {
+    function handleResize() {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight })
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     if (!playlistTag) return
@@ -112,22 +191,44 @@ export function GalleryScene({ tracks, onBack }: Props) {
     setSelectedIndex((prev) => (prev === null ? null : (prev + 1) % tracks.length))
   }, [tracks.length])
 
+  // Keep gallery highlight in sync with selectedIndex (e.g. when auto-advancing)
+  useEffect(() => {
+    if (selectedIndex === null) return
+    const item = items[selectedIndex]
+    if (item) core.handleItemClick(item)
+  }, [selectedIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSetGroupBy = (mode: GroupByMode) => {
     setGroupByMode(mode)
     if (mode === 'scatter') {
       core.setGroupBy(null)
-    } else if (mode === 'year') {
-      core.setGroupBy((item: UniverseItem<Track>) => item.data.releaseDate.slice(0, 4))
     } else {
-      core.setGroupBy((item: UniverseItem<Track>) => item.data.addedAt.slice(0, 7))
+      core.setGroupBy((item: UniverseItem<Track>) => getTrackGroup(item.data, mode))
     }
   }
 
   const groupByFn = useMemo((): ((item: RenderItem<Track>) => string) | null => {
-    if (groupByMode === 'year') return (item) => item.data.releaseDate.slice(0, 4)
-    if (groupByMode === 'added') return (item) => item.data.addedAt.slice(0, 7)
+    if (groupByMode !== 'scatter') return (item) => getTrackGroup(item.data, groupByMode)
     return null
   }, [groupByMode])
+
+  const groups = useMemo(() => {
+    if (groupByMode === 'scatter') return []
+
+    const counts = new Map<string, number>()
+    for (const track of tracks) {
+      const key = getTrackGroup(track, groupByMode)
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+
+    return [...counts.entries()]
+      .map(([key, count]) => ({ key, count }))
+      .sort((a, b) => {
+        if (a.key === 'unknown') return 1
+        if (b.key === 'unknown') return -1
+        return a.key.localeCompare(b.key, undefined, { numeric: true })
+      })
+  }, [groupByMode, tracks])
 
   const selectedTrack = selectedIndex !== null ? tracks[selectedIndex] : null
 
@@ -143,20 +244,29 @@ export function GalleryScene({ tracks, onBack }: Props) {
 
       {/* Group-by buttons — vertical column below back button */}
       <div className="gallery-scene__group-buttons">
-        {(['scatter', 'year', 'added'] as GroupByMode[]).map((mode) => {
-          const label = mode === 'scatter' ? 'Scatter' : mode === 'year' ? 'By Year' : 'By Added'
+        {GROUP_BY_MODES.map((mode) => {
           const isActive = groupByMode === mode
+          const isDisabled = GEMINI_MODES.has(mode) && !geminiReady
           return (
             <button
               key={mode}
               onClick={() => handleSetGroupBy(mode)}
-              className={`gallery-scene__button${isActive ? ' gallery-scene__button--active' : ''}`}
+              disabled={isDisabled}
+              className={`gallery-scene__button${isActive ? ' gallery-scene__button--active' : ''}${isDisabled ? ' gallery-scene__button--pending' : ''}`}
             >
-              {label}
+              {GROUP_BY_LABELS[mode]}
             </button>
           )
         })}
       </div>
+
+      <CategoryNav
+        groups={groups}
+        cameraRef={core.cameraRef}
+        groupCentersRef={core.groupCentersRef}
+        onSelect={(key) => core.navigateToGroup(key)}
+        outerStyle={selectedTrack ? categoryNavPlayerOffset : undefined}
+      />
 
       <div className="gallery-scene__playlist-controls">
         {!playlist && (
@@ -201,9 +311,9 @@ export function GalleryScene({ tracks, onBack }: Props) {
       </div>
 
       <UniverseCanvas
-        core={{ ...core, animationState: core.animRef }}
-        width={window.innerWidth}
-        height={window.innerHeight}
+        core={core}
+        width={dimensions.width}
+        height={dimensions.height}
         renderItem={renderItem}
         groupBy={groupByFn}
       />

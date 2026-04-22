@@ -3,7 +3,6 @@ import { useSpotifyAuth } from './hooks/useSpotifyAuth'
 import { useLikedSongsLoader } from './hooks/useLikedSongsLoader'
 import { ModeSelect } from './components/mode-select/ModeSelect'
 import { GalleryScene } from './components/gallery-scene/GalleryScene'
-import type { Track } from './types/spotify'
 import './App.css'
 
 const MODE_KEY = 'playlist-universe:mode'
@@ -13,10 +12,11 @@ type View = 'mode-select' | 'liked-loading' | 'gallery' | 'error'
 export default function App() {
   const { tokens, isLoading: authLoading, errorMessage: authError, login } = useSpotifyAuth()
   const [view, setView] = useState<View>('mode-select')
-  const [galleryTracks, setGalleryTracks] = useState<Track[]>([])
+  const [loaderEnabled, setLoaderEnabled] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [geminiToast, setGeminiToast] = useState<string | null>(null)
 
-  const liked = useLikedSongsLoader({ enabled: view === 'liked-loading' })
+  const liked = useLikedSongsLoader({ enabled: loaderEnabled })
 
   // After OAuth callback: start loading liked songs
   useEffect(() => {
@@ -26,24 +26,43 @@ export default function App() {
     if (!savedMode) return
     sessionStorage.removeItem(MODE_KEY)
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoaderEnabled(true)
     setView('liked-loading')
   }, [authLoading, tokens])
 
-  // When liked songs load completes, go to gallery or error
+  // Spotify done → show gallery immediately, Gemini continues in background
   useEffect(() => {
-    if (!liked.isComplete) return
-    if (liked.error) {
+    if (liked.stage === 'gemini' && view === 'liked-loading') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setErrorMessage(liked.error)
-      setView('error')
-    } else {
-      setGalleryTracks(liked.tracks)
       setView('gallery')
     }
-  }, [liked.isComplete, liked.error, liked.tracks])
+  }, [liked.stage, view])
+
+  // When fully complete, disable loader and handle errors
+  useEffect(() => {
+    if (!liked.isComplete) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoaderEnabled(false)
+    if (liked.error) {
+      // Spotify failure — full-page error
+      setErrorMessage(liked.error)
+      setView('error')
+    } else if (liked.geminiError) {
+      // Gemini failure — non-fatal toast
+      setGeminiToast(liked.geminiError)
+    }
+  }, [liked.isComplete, liked.error, liked.geminiError])
+
+  // Auto-dismiss gemini error toast
+  useEffect(() => {
+    if (!geminiToast) return
+    const t = window.setTimeout(() => setGeminiToast(null), 5000)
+    return () => window.clearTimeout(t)
+  }, [geminiToast])
 
   const handleBegin = async () => {
     if (tokens) {
+      setLoaderEnabled(true)
       setView('liked-loading')
       return
     }
@@ -52,13 +71,25 @@ export default function App() {
   }
 
   const reset = () => {
+    setLoaderEnabled(false)
     setView('mode-select')
-    setGalleryTracks([])
     setErrorMessage(null)
+    setGeminiToast(null)
   }
 
   if (view === 'gallery') {
-    return <GalleryScene tracks={galleryTracks} onBack={reset} />
+    return (
+      <>
+        <GalleryScene
+          tracks={liked.tracks}
+          geminiReady={liked.isComplete && !liked.geminiError}
+          onBack={reset}
+        />
+        {geminiToast && (
+          <div className="app-gemini-toast">{geminiToast}</div>
+        )}
+      </>
+    )
   }
 
   if (view === 'liked-loading') {
@@ -66,7 +97,9 @@ export default function App() {
       <div className="app-status-screen">
         <div className="app-spinner" />
         <p className="app-status-text">
-          {liked.loadedCount > 0 ? `Loading ${liked.loadedCount} tracks…` : 'Loading liked songs…'}
+          {liked.loadedCount > 0
+            ? `Loading ${liked.loadedCount} tracks...`
+            : 'Loading liked songs...'}
         </p>
       </div>
     )

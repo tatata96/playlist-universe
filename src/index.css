@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -5,16 +7,17 @@
 }
 
 :root {
-  --gold: #c9a84c;
-  --gold-light: #e8c97a;
-  --gold-dim: rgba(201, 168, 76, 0.15);
-  --void: #06060d;
-  --surface: rgba(12, 12, 22, 0.85);
-  --surface-solid: #0c0c16;
-  --text-primary: #ede8e0;
-  --text-secondary: rgba(237, 232, 224, 0.5);
-  --text-dim: rgba(237, 232, 224, 0.25);
-  --border: rgba(201, 168, 76, 0.15);
+  --gold: #f2c94c;
+  --gold-light: #f8df84;
+  --gold-dim: rgba(242, 201, 76, 0.18);
+  --void: #f7f4ea;
+  --surface: rgba(255, 255, 252, 0.92);
+  --surface-solid: #fffffc;
+  --text-primary: #12110f;
+  --text-secondary: rgba(18, 17, 15, 0.62);
+  --text-dim: rgba(18, 17, 15, 0.32);
+  --border: rgba(18, 17, 15, 0.14);
+  --font-pixel: 'Pixelify Sans', 'JetBrains Mono', 'Courier New', monospace;
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 }

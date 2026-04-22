@@ -7,33 +7,37 @@ interface Props {
 export function ModeSelect({ onBegin }: Props) {
   return (
     <div className="mode-select">
+      <div className="mode-select__sky" aria-hidden="true">
+        <span className="mode-select__spark mode-select__spark--one" />
+        <span className="mode-select__spark mode-select__spark--two" />
+        <span className="mode-select__spark mode-select__spark--three" />
+        <span className="mode-select__spark mode-select__spark--four" />
+      </div>
 
-      {/* Title */}
       <div className="mode-select__title">
+        <div className="mode-select__build">Private beta build</div>
         <h1 className="mode-select__heading">
           Playlist <em>Universe</em>
         </h1>
         <p className="mode-select__subtitle">
-          invite only
+          press start to launch
         </p>
       </div>
 
-      {/* Card */}
       <div className="mode-select__cards">
         <div className="mode-select__card mode-select__card--invite">
+          <div className="mode-select__badge">Save file 01</div>
 
-          <div className="mode-select__icon">❤️</div>
           <div className="mode-select__card-title">
-            Liked Songs
+            Fly Through Your Liked Songs
           </div>
           <p className="mode-select__description">
-            Fly through all your saved tracks in a personal universe
+            Launch your saved tracks into orbit
           </p>
 
-          {/* Access notice */}
           <div className="mode-select__notice">
             <div className="mode-select__notice-title">
-              Access required
+              Access pass required
             </div>
             <p className="mode-select__notice-text">
               Invite-only while in development.<br />
@@ -49,10 +53,9 @@ export function ModeSelect({ onBegin }: Props) {
           </div>
 
           <button onClick={onBegin} className="mode-select__button mode-select__button--primary">
-            Enter →
+            Press Start
           </button>
 
-          {/* Disclaimer */}
           <div className="mode-select__disclaimer">
             <span>Note:</span> if your account hasn't been added,<br />
             Spotify will return an error after login.

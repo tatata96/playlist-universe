@@ -4,6 +4,24 @@ import { saveTokens } from './spotifyTokenStorage'
 
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
 
+export class SpotifyTokenRequestError extends Error {
+  status: number
+  spotifyError?: string
+  spotifyErrorDescription?: string
+
+  constructor(status: number, message: string, spotifyError?: string, spotifyErrorDescription?: string) {
+    super(message)
+    this.name = 'SpotifyTokenRequestError'
+    this.status = status
+    this.spotifyError = spotifyError
+    this.spotifyErrorDescription = spotifyErrorDescription
+  }
+}
+
+export function isSpotifyInvalidGrantError(error: unknown) {
+  return error instanceof SpotifyTokenRequestError && error.spotifyError === 'invalid_grant'
+}
+
 function wait(ms: number) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms)
@@ -46,9 +64,13 @@ export async function postSpotifyToken(params: URLSearchParams) {
 
     if (!response.ok) {
       let message = `Spotify token request failed with ${response.status}.`
+      let spotifyError: string | undefined
+      let spotifyErrorDescription: string | undefined
 
       try {
         const errorBody = (await response.json()) as SpotifyTokenResponse
+        spotifyError = errorBody.error
+        spotifyErrorDescription = errorBody.error_description
         const details = errorBody.error_description ?? errorBody.error
         if (details) {
           message = `Spotify token request failed: ${details}`
@@ -57,7 +79,7 @@ export async function postSpotifyToken(params: URLSearchParams) {
         // Keep the fallback message when the response is not JSON.
       }
 
-      throw new Error(message)
+      throw new SpotifyTokenRequestError(response.status, message, spotifyError, spotifyErrorDescription)
     }
 
     return (await response.json()) as SpotifyTokenResponse
