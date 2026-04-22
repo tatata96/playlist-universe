@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# Playlist Universe
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Playlist Universe lets you fly through your Spotify liked songs as a little galaxy of tracks. Drift between tracks, group them by mood, genre, year, scene, and other musical signals, then collect favorites into new private playlists as you explore.
 
-Currently, two official plugins are available:
+The app is currently invite-only while in development. Spotify users must be added to the Spotify developer app before they can complete authorization.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- Spotify sign-in with PKCE.
+- Loads all liked songs from the Spotify Web API.
+- Interactive `gallery-universe` canvas using album artwork.
+- Grouping modes for year, date added, country, speed, genre, energy, scene, instrumentation, and popularity tier.
+- Gemini-powered enrichment for grouping metadata.
+- Private playlist creation and track adding from inside the gallery.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Requirements
 
-## Expanding the ESLint configuration
+- Node.js and npm.
+- A Spotify developer app.
+- A Gemini API key.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Environment
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Create a `.env.local` file in the project root:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
+VITE_SPOTIFY_REDIRECT_URI=http://127.0.0.1:5173/
+VITE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Optional Gemini settings:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_GEMINI_MODEL=gemini-2.5-flash-lite
+VITE_GEMINI_TRACK_BATCH_SIZE=20
 ```
+
+The Spotify redirect URI must be registered in the Spotify developer dashboard. For local development, use `http://127.0.0.1:5173/`; `http://localhost` is intentionally rejected by the app.
+
+Required Spotify scopes:
+
+- `user-library-read`
+- `playlist-read-private`
+- `playlist-modify-private`
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the dev server:
+
+```bash
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
+## App Flow
+
+1. The user starts the liked-songs mode.
+2. If needed, the app redirects to Spotify authorization.
+3. Spotify redirects back with an authorization code.
+4. The app exchanges the code for tokens and stores them locally.
+5. Liked songs are loaded from Spotify.
+6. The gallery opens as soon as Spotify data is ready.
+7. Gemini enrichment continues in the background and unlocks metadata grouping modes when complete.
